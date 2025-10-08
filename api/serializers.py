@@ -1,10 +1,15 @@
-# quizzes/serializers.py
 from rest_framework import serializers
 
 class QuizGenerationSerializer(serializers.Serializer):
     """
-    Serializer for generating quiz in your exact format:
-    {'domain': 'python', 'sub-domain': 'list', 'number_of_questions': 10, 'level': 'easy'}
+    Serializer for generating quiz request body.
+    Example:
+    {
+        "domain": "python",
+        "sub_domain": "list",
+        "number_of_questions": 10,
+        "level": "easy"
+    }
     """
     domain = serializers.CharField(max_length=100)
     sub_domain = serializers.CharField(max_length=100)
@@ -12,3 +17,14 @@ class QuizGenerationSerializer(serializers.Serializer):
     level = serializers.ChoiceField(
         choices=[('easy', 'Easy'), ('medium', 'Medium'), ('hard', 'Hard')]
     )
+
+
+class GeneratedQuestionSerializer(serializers.Serializer):
+    """
+    Serializer for AI-generated question response (supports multiple correct answers)
+    """
+    id = serializers.IntegerField()
+    question = serializers.CharField()
+    options = serializers.ListField(child=serializers.CharField())
+    correct_answers = serializers.ListField(child=serializers.CharField())
+    explanation = serializers.CharField()

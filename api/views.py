@@ -1,4 +1,3 @@
-# quizzes/views.py
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.decorators import api_view
@@ -9,7 +8,7 @@ from .services import AIService
 
 @swagger_auto_schema(
     method='post',
-    operation_description="Generate quiz questions using AI",
+    operation_description="Generate quiz questions using AI (supports multiple correct answers)",
     request_body=QuizGenerationSerializer,
     responses={
         200: openapi.Response(
@@ -21,8 +20,14 @@ from .services import AIService
                     properties={
                         'id': openapi.Schema(type=openapi.TYPE_INTEGER),
                         'question': openapi.Schema(type=openapi.TYPE_STRING),
-                        'options': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
-                        'correct_answer': openapi.Schema(type=openapi.TYPE_STRING),
+                        'options': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(type=openapi.TYPE_STRING)
+                        ),
+                        'correct_answers': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(type=openapi.TYPE_STRING)
+                        ),
                         'explanation': openapi.Schema(type=openapi.TYPE_STRING),
                     }
                 )
@@ -47,35 +52,27 @@ from .services import AIService
         )
     }
 )
-
 @api_view(['POST'])
 def generate_quiz(request):
     """
-    Generate quiz using Gemini 2.0 Flash
-    Returns ONLY questions array
+    Generate quiz using Gemini 2.0 Flash (multiple correct answers)
+    Returns ONLY the questions array
     """
-    # Validate input
     serializer = QuizGenerationSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Extract data
+
     data = serializer.validated_data
-    
-    # Generate questions
+
     ai_service = AIService()
     result = ai_service.generate_quiz_questions(
         domain=data['domain'],
-        sub_domain=data['sub_domain'], 
+        sub_domain=data['sub_domain'],
         number_of_questions=data['number_of_questions'],
         level=data['level']
     )
-    
-    # Handle response - RETURN ONLY QUESTIONS ARRAY
-    if 'error' in result:
-        return Response({
-            'error': result['error']
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
-    # Return only the questions array directly
-    return Response(result)
+
+    if isinstance(result, dict) and 'error' in result:
+        return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response(result, status=status.HTTP_200_OK)
