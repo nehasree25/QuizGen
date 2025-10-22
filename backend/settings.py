@@ -47,6 +47,10 @@ SWAGGER_SETTINGS = {
 DEBUG = True
 
 ALLOWED_HOSTS = []
+# headers: {
+#   'Content-Type': 'application/json',
+#   'Authorization': `Bearer ${getToken()}`,
+# }
 
 
 # Application definition
@@ -59,9 +63,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
+    'corsheaders',
     'drf_yasg',
     'api',
-    'corsheaders',
+    'user',
+    
 ]
 
 MIDDLEWARE = [
@@ -94,6 +102,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
+from datetime import timedelta
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticated",
+    )
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "ALGORITHM": "HS256",
+    # Optionally set your signing key; by default Django SECRET_KEY is used
+    # "SIGNING_KEY": SECRET_KEY,
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
