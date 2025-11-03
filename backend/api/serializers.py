@@ -1,5 +1,5 @@
 from rest_framework import serializers
-
+from .models import QuizHistory
 class QuizGenerationSerializer(serializers.Serializer):
     """
     Serializer for generating quiz request body.
@@ -28,3 +28,16 @@ class GeneratedQuestionSerializer(serializers.Serializer):
     options = serializers.ListField(child=serializers.CharField())
     correct_answers = serializers.ListField(child=serializers.CharField())
     explanation = serializers.CharField()
+class QuizHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuizHistory
+        fields = [
+            'id', 'user', 'domain', 'sub_domain',
+            'questions', 'user_answers', 'score',
+            'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['user']
+
+class ResumeQuizSerializer(serializers.Serializer):
+    domain = serializers.CharField(max_length=100)
+    sub_domain = serializers.CharField(max_length=100)

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { setTokens, setUser } from '../utils/auth';
+import API_BASE_URL from '../config';
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -28,7 +29,7 @@ const Signup = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/auth/signup/', {
+  const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/auth/signup/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

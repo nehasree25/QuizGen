@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { setTokens, setUser, authFetch } from '../utils/auth';
+import API_BASE_URL from '../config';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -24,7 +25,7 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/auth/login/', {
+  const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/auth/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,7 +41,7 @@ const Login = () => {
         
         // Fetch user profile after login
         try {
-          const profileResponse = await authFetch('http://localhost:8000/auth/profile/');
+          const profileResponse = await authFetch('/auth/profile/');
           if (profileResponse.ok) {
             const userData = await profileResponse.json();
             setUser(userData);
@@ -63,7 +64,7 @@ const Login = () => {
   return (
     <div className="home-container">
       <div className="home-card">
-        <h1>Welcome Back</h1>
+        <h1 style={{ color: 'var(--primary-color)' }}>Welcome Back</h1>
         <p className="subtitle">Sign in to your account</p>
 
         <form onSubmit={handleSubmit} className="quiz-form">
@@ -111,7 +112,7 @@ const Login = () => {
               <Link 
                 to="/signup" 
                 style={{ 
-                  color: '#256178', 
+                  color: 'var(--primary-color)', 
                   textDecoration: 'none',
                   fontWeight: '600'
                 }}

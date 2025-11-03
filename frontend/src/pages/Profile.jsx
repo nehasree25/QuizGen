@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUser, setUser, removeTokens, removeUser, authFetch } from '../utils/auth';
+import { getUser, setUser, authFetch } from '../utils/auth';
 import Navbar from '../components/Navbar';
 
 const Profile = () => {
@@ -26,7 +26,7 @@ const Profile = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await authFetch('http://localhost:8000/auth/profile/');
+        const response = await authFetch('/auth/profile/');
         if (response.ok) {
           const data = await response.json();
           setUserData(data);
@@ -46,19 +46,11 @@ const Profile = () => {
     fetchProfile();
   }, []);
 
-  const handlePasswordChange = (e) => {
-    setPasswordData({
-      ...passwordData,
-      [e.target.name]: e.target.value
-    });
-  };
+  const handlePasswordChange = (e) =>
+    setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
 
-  const handleEditChange = (e) => {
-    setEditData({
-      ...editData,
-      [e.target.name]: e.target.value
-    });
-  };
+  const handleEditChange = (e) =>
+    setEditData({ ...editData, [e.target.name]: e.target.value });
 
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
@@ -71,7 +63,7 @@ const Profile = () => {
     }
 
     try {
-      const response = await authFetch('http://localhost:8000/auth/change-password/', {
+      const response = await authFetch('/auth/change-password/', {
         method: 'POST',
         body: JSON.stringify(passwordData),
       });
@@ -86,13 +78,12 @@ const Profile = () => {
         setShowChangePassword(false);
       } else {
         const errorData = await response.json();
-        if (errorData.old_password) {
-          setPasswordError(`Current password: ${errorData.old_password[0]}`);
-        } else if (errorData.new_password) {
-          setPasswordError(`New password: ${errorData.new_password[0]}`);
-        } else {
-          setPasswordError('Failed to update password');
-        }
+        setPasswordError(
+          errorData.old_password?.[0] ||
+          errorData.new_password?.[0] ||
+          errorData.detail ||
+          'Failed to update password'
+        );
       }
     } catch (error) {
       setPasswordError('Failed to connect to server');
@@ -105,8 +96,7 @@ const Profile = () => {
     setProfileSuccess('');
 
     try {
-      console.log('Sending profile update data:', editData);
-      const response = await authFetch('http://localhost:8000/auth/profile/edit/', {
+      const response = await authFetch('/auth/profile/edit/', {
         method: 'PATCH',
         body: JSON.stringify(editData),
       });
@@ -117,26 +107,12 @@ const Profile = () => {
         setUserData(data);
         setUser(data);
         setShowEditProfile(false);
-        
-        // Refresh the profile data
-        const profileResponse = await authFetch('http://localhost:8000/auth/profile/');
-        if (profileResponse.ok) {
-          const profileData = await profileResponse.json();
-          setUserData(profileData);
-          setEditData({
-            first_name: profileData.first_name || '',
-            last_name: profileData.last_name || ''
-          });
-        }
       } else {
         const errorData = await response.json();
-        console.error('Profile update error:', errorData);
-        console.error('Response status:', response.status);
-        setProfileError(errorData.error || errorData.detail || JSON.stringify(errorData) || 'Failed to update profile');
+        setProfileError(errorData.error || errorData.detail || 'Failed to update profile');
       }
     } catch (error) {
-      console.error('Profile update catch error:', error);
-      setProfileError('Failed to connect to server: ' + error.message);
+      setProfileError('Failed to connect to server');
     }
   };
 
@@ -144,10 +120,8 @@ const Profile = () => {
     return (
       <div style={styles.container}>
         <Navbar />
-        <div style={styles.content}>
-          <div style={styles.profileCard}>
-            <div style={styles.loading}>Loading...</div>
-          </div>
+        <div style={styles.loadingContainer}>
+          <div style={styles.loadingText}>Loading...</div>
         </div>
       </div>
     );
@@ -156,41 +130,35 @@ const Profile = () => {
   return (
     <div style={styles.container}>
       <Navbar />
-      
       <div style={styles.content}>
         <div style={styles.profileCard}>
-          <h1 style={styles.title}>Profile</h1>
-          
-          {/* Profile Information */}
+          <h1 style={styles.title}>My Profile</h1>
+
           <div style={styles.userInfo}>
             <div style={styles.infoItem}>
               <label style={styles.label}>Username:</label>
               <span style={styles.value}>{userData?.username || 'N/A'}</span>
             </div>
-            
             <div style={styles.infoItem}>
               <label style={styles.label}>Email:</label>
               <span style={styles.value}>{userData?.email || 'N/A'}</span>
             </div>
-            
             <div style={styles.infoItem}>
               <label style={styles.label}>First Name:</label>
               <span style={styles.value}>{userData?.first_name || 'N/A'}</span>
             </div>
-            
             <div style={styles.infoItem}>
               <label style={styles.label}>Last Name:</label>
               <span style={styles.value}>{userData?.last_name || 'N/A'}</span>
             </div>
           </div>
 
-          {/* Edit Profile and Change Password Side by Side */}
           <div style={styles.actionsGrid}>
             {/* Edit Profile Section */}
             <div style={styles.actionCard}>
               <div style={styles.actionHeader}>
                 <h3 style={styles.actionTitle}>Edit Profile</h3>
-                <button 
+                <button
                   onClick={() => setShowEditProfile(!showEditProfile)}
                   style={styles.toggleButton}
                 >
@@ -201,44 +169,33 @@ const Profile = () => {
               {showEditProfile && (
                 <form onSubmit={handleProfileSubmit} style={styles.form}>
                   <div style={styles.formGroup}>
-                    <label style={styles.formLabel}>First Name:</label>
-                    <input 
+                    <label style={styles.formLabel}>First Name</label>
+                    <input
                       type="text"
                       name="first_name"
                       value={editData.first_name}
                       onChange={handleEditChange}
                       style={styles.input}
-                      placeholder="Enter first name"
                     />
                   </div>
-                  
+
                   <div style={styles.formGroup}>
-                    <label style={styles.formLabel}>Last Name:</label>
-                    <input 
+                    <label style={styles.formLabel}>Last Name</label>
+                    <input
                       type="text"
                       name="last_name"
                       value={editData.last_name}
                       onChange={handleEditChange}
                       style={styles.input}
-                      placeholder="Enter last name"
                     />
                   </div>
-                  
+
                   <button type="submit" style={styles.primaryButton}>
                     Update Profile
                   </button>
-                  
-                  {profileError && (
-                    <div style={styles.errorMessage}>
-                      {profileError}
-                    </div>
-                  )}
-                  
-                  {profileSuccess && (
-                    <div style={styles.successMessage}>
-                      {profileSuccess}
-                    </div>
-                  )}
+
+                  {profileError && <div style={styles.errorMessage}>{profileError}</div>}
+                  {profileSuccess && <div style={styles.successMessage}>{profileSuccess}</div>}
                 </form>
               )}
             </div>
@@ -247,7 +204,7 @@ const Profile = () => {
             <div style={styles.actionCard}>
               <div style={styles.actionHeader}>
                 <h3 style={styles.actionTitle}>Change Password</h3>
-                <button 
+                <button
                   onClick={() => setShowChangePassword(!showChangePassword)}
                   style={styles.toggleButton}
                 >
@@ -258,56 +215,47 @@ const Profile = () => {
               {showChangePassword && (
                 <form onSubmit={handlePasswordSubmit} style={styles.form}>
                   <div style={styles.formGroup}>
-                    <label style={styles.formLabel}>Current Password:</label>
-                    <input 
+                    <label style={styles.formLabel}>Current Password</label>
+                    <input
                       type="password"
                       name="old_password"
                       value={passwordData.old_password}
                       onChange={handlePasswordChange}
                       style={styles.input}
-                      required 
+                      required
                     />
                   </div>
-                  
+
                   <div style={styles.formGroup}>
-                    <label style={styles.formLabel}>New Password:</label>
-                    <input 
+                    <label style={styles.formLabel}>New Password</label>
+                    <input
                       type="password"
                       name="new_password"
                       value={passwordData.new_password}
                       onChange={handlePasswordChange}
                       style={styles.input}
-                      required 
+                      required
                     />
                   </div>
-                  
+
                   <div style={styles.formGroup}>
-                    <label style={styles.formLabel}>Confirm New Password:</label>
-                    <input 
+                    <label style={styles.formLabel}>Confirm New Password</label>
+                    <input
                       type="password"
                       name="new_password2"
                       value={passwordData.new_password2}
                       onChange={handlePasswordChange}
                       style={styles.input}
-                      required 
+                      required
                     />
                   </div>
-                  
+
                   <button type="submit" style={styles.primaryButton}>
                     Update Password
                   </button>
-                  
-                  {passwordError && (
-                    <div style={styles.errorMessage}>
-                      {passwordError}
-                    </div>
-                  )}
-                  
-                  {passwordSuccess && (
-                    <div style={styles.successMessage}>
-                      {passwordSuccess}
-                    </div>
-                  )}
+
+                  {passwordError && <div style={styles.errorMessage}>{passwordError}</div>}
+                  {passwordSuccess && <div style={styles.successMessage}>{passwordSuccess}</div>}
                 </form>
               )}
             </div>
@@ -321,184 +269,111 @@ const Profile = () => {
 const styles = {
   container: {
     minHeight: '100vh',
-    backgroundColor: '#f0faff',
-    background: 'linear-gradient(135deg, #f0faff 0%, #e6f7ff 100%)',
+    background: 'linear-gradient(135deg, #F5E6D2, #FCD6BA)',
+    backgroundAttachment: 'fixed',
   },
   content: {
     padding: '2rem',
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'flex-start',
-    minHeight: '80vh',
   },
   profileCard: {
-    background: '#ffffff',
-    padding: '3rem',
-    borderRadius: '20px',
-    boxShadow: '0 20px 60px rgba(135, 206, 235, 0.15)',
+    background: 'rgba(255, 255, 255, 0.9)',
+    padding: '2.5rem',
+    borderRadius: '25px',
+    boxShadow: '0 10px 30px rgba(217, 136, 154, 0.2)',
     width: '100%',
     maxWidth: '900px',
-    border: '2px solid #e6f7ff',
+    backdropFilter: 'blur(8px)',
   },
   title: {
-    color: '#256178',
+    color: '#000000ff',
     textAlign: 'center',
-    marginBottom: '2.5rem',
-    fontSize: '2.5rem',
+    fontSize: '2.2rem',
     fontWeight: '700',
-    background: 'linear-gradient(135deg, #256178 0%, #87ceeb 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
+    marginBottom: '2rem',
   },
   userInfo: {
-    marginBottom: '3rem',
-    padding: '2rem',
-    backgroundColor: '#f8fbfe',
+    background: '#FFF8F9',
+    border: '1px solid #F6A6B5',
     borderRadius: '15px',
-    border: '1px solid #e6f7ff',
+    padding: '1.5rem',
+    marginBottom: '2rem',
   },
   infoItem: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '1rem 0',
-    borderBottom: '1px solid #e6f7ff',
+    padding: '0.7rem 0',
+    borderBottom: '1px solid #FCD6BA',
   },
-  label: {
-    fontWeight: '600',
-    color: '#256178',
-    fontSize: '1rem',
-  },
-  value: {
-    color: '#4a6572',
-    fontSize: '1rem',
-    fontWeight: '500',
-  },
+  label: { fontWeight: '600', color: '#000000ff' },
+  value: { color: '#4a2c2a', fontWeight: '500' },
   actionsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '2rem',
-  },
-  actionCard: {
-    padding: '2rem',
-    backgroundColor: '#f8fbfe',
-    borderRadius: '15px',
-    border: '1px solid #e6f7ff',
-    transition: 'all 0.3s ease',
-  },
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: '1.5rem',
+  alignItems: 'start', // add this line
+},
+actionCard: {
+  background: 'rgba(255,255,255,0.8)',
+  borderRadius: '15px',
+  padding: '1.5rem',
+  border: '1px solid #F5E6D2',
+  boxShadow: '0 6px 20px rgba(217,136,154,0.15)',
+  height: 'auto', // add this line
+},
+
   actionHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '1.5rem',
+    marginBottom: '1rem',
   },
-  actionTitle: {
-    color: '#256178',
-    fontSize: '1.3rem',
-    fontWeight: '600',
-    margin: 0,
-  },
+  actionTitle: { color: '#D9889A', fontWeight: '600', fontSize: '1.2rem' },
   toggleButton: {
-    padding: '0.7rem 1.2rem',
-    backgroundColor: '#87ceeb',
-    color: '#1a365d',
+    background: '#D9889A',
+    color: '#000000ff',
     border: 'none',
     borderRadius: '10px',
-    fontSize: '0.9rem',
-    fontWeight: '600',
+    padding: '0.6rem 1.2rem',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
+    transition: '0.3s',
   },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.2rem',
-  },
-  formGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  formLabel: {
-    fontWeight: '600',
-    color: '#256178',
-    fontSize: '0.9rem',
-  },
+  formGroup: { marginBottom: '1rem' },
+  formLabel: { color: '#090909ff', fontWeight: '600', marginBottom: '0.4rem' },
   input: {
-    padding: '0.9rem',
-    border: '2px solid #e6f7ff',
-    borderRadius: '8px',
-    fontSize: '0.95rem',
-    backgroundColor: '#ffffff',
-    transition: 'all 0.3s ease',
+    width: '100%',
+    padding: '0.8rem',
+    borderRadius: '10px',
+    border: '1px solid #F6A6B5',
     outline: 'none',
+    fontSize: '0.95rem',
   },
   primaryButton: {
-    padding: '0.9rem 1.5rem',
-    backgroundColor: '#4CAF50',
-    color: 'white',
+    background: '#F28AA6',
+    color: '#fff',
     border: 'none',
-    borderRadius: '10px',
-    fontSize: '0.95rem',
+    borderRadius: '12px',
+    padding: '0.8rem 1.5rem',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    marginTop: '0.5rem',
+    transition: '0.3s',
   },
   errorMessage: {
-    backgroundColor: '#fff3cd',
-    border: '1px solid #ffeaa7',
-    color: '#856404',
-    padding: '0.8rem',
-    borderRadius: '8px',
-    fontWeight: '600',
+    background: '#FCD6BA',
+    color: '#4a2c2a',
+    borderRadius: '10px',
+    padding: '0.6rem',
+    marginTop: '0.5rem',
     textAlign: 'center',
-    fontSize: '0.85rem',
   },
   successMessage: {
-    backgroundColor: '#d1edff',
-    border: '1px solid #87ceeb',
-    color: '#256178',
-    padding: '0.8rem',
-    borderRadius: '8px',
-    fontWeight: '600',
+    background: '#F5E6D2',
+    color: '#4a2c2a',
+    borderRadius: '10px',
+    padding: '0.6rem',
+    marginTop: '0.5rem',
     textAlign: 'center',
-    fontSize: '0.85rem',
-  },
-  loading: {
-    textAlign: 'center',
-    color: '#256178',
-    fontSize: '1.2rem',
-    fontWeight: '600',
   },
 };
-
-// Add hover effects
-const styleSheet = document.createElement("style");
-styleSheet.innerText = `
-  button[style*="toggleButton"]:hover {
-    background-color: #63b7db !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(135, 206, 235, 0.3);
-  }
-  
-  button[style*="primaryButton"]:hover {
-    background-color: #45a049 !important;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-  }
-  
-  input[style*="input"]:focus {
-    border-color: #87ceeb !important;
-    box-shadow: 0 0 0 3px rgba(135, 206, 235, 0.2);
-  }
-  
-  .actionCard:hover {
-    box-shadow: 0 8px 25px rgba(135, 206, 235, 0.1);
-    transform: translateY(-2px);
-  }
-`;
-document.head.appendChild(styleSheet);
 
 export default Profile;

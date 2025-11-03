@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { authFetch } from '../utils/auth';
 // import '.Quiz.css'; // optional if you have styles
 
 function Quiz() {
   const location = useLocation();
   const navigate = useNavigate();
   const questions = location.state?.questions || [];
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [userAnswers, setUserAnswers] = useState([]);
-  const [selectedAnswers, setSelectedAnswers] = useState([]);
+  const resumeIndex = location.state?.resumeIndex || location.state?.resumeAt || 0;
+  const initialUserAnswers = location.state?.userAnswers || location.state?.user_answers || [];
+  const [currentQuestion, setCurrentQuestion] = useState(resumeIndex || 0);
+  const [userAnswers, setUserAnswers] = useState(initialUserAnswers || []);
+  const [selectedAnswers, setSelectedAnswers] = useState(userAnswers[currentQuestion] || []);
+
+  // Keep selected answers in sync when currentQuestion or userAnswers change
+  useEffect(() => {
+    setSelectedAnswers(userAnswers[currentQuestion] || []);
+  }, [currentQuestion, userAnswers]);
 
   // Handle case when no questions are passed
   if (questions.length === 0) {
@@ -60,13 +68,41 @@ function Quiz() {
       const nextAnswers = newAnswers[currentQuestion + 1] || [];
       setSelectedAnswers(nextAnswers);
     } else {
-      // ✅ Finished — go to results
-      navigate('/results', {
-        state: {
-          questions: questions,
-          userAnswers: newAnswers,
-        },
-      });
+      // ✅ Finished — mark complete on backend if quizId is present, then go to results
+      (async () => {
+        try {
+          const quizId = location.state?.quizId || location.state?.quiz_id || null;
+          if (quizId) {
+            try {
+              const markResp = await authFetch(`/mark-complete/${quizId}/`, {
+                method: 'POST',
+                body: JSON.stringify({ user_answers: newAnswers }),
+              });
+
+              if (markResp.ok) {
+                // If backend returns stored result or canonical user answers, use them
+                const markData = await markResp.json().catch(() => null);
+                if (markData && (markData.questions || markData.userAnswers || markData.user_answers)) {
+                  const questionsFromServer = markData.questions || markData.question_list || questions;
+                  const userAnswersFromServer = markData.userAnswers || markData.user_answers || newAnswers;
+                  navigate('/results', { state: { questions: questionsFromServer, userAnswers: userAnswersFromServer } });
+                  return;
+                }
+              } else {
+                console.warn('mark-complete failed', markResp.status);
+              }
+            } catch (err) {
+              console.error('Error calling mark-complete:', err);
+            }
+          }
+
+          // Fallback: navigate with local data
+          navigate('/results', { state: { questions: questions, userAnswers: newAnswers } });
+        } catch (err) {
+          console.error('Error finishing quiz:', err);
+          navigate('/results', { state: { questions: questions, userAnswers: newAnswers } });
+        }
+      })();
     }
   };
 

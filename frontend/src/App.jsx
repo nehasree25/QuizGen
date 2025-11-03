@@ -8,6 +8,7 @@ import Quiz from './pages/Quiz';
 import Results from './pages/Results';
 import Profile from './pages/Profile';
 import History from './pages/History';
+import GenerateQuiz from './pages/GenerateQuiz';
 import './App.css';
 
 function App() {
@@ -53,6 +54,14 @@ function App() {
                 <History />
               </ProtectedRoute>
             } 
+          />
+          <Route 
+            path="/generate-quiz"
+            element={
+              <ProtectedRoute>
+                <GenerateQuiz />
+              </ProtectedRoute>
+            }
           />
           
           {/* Quiz routes - protected */}

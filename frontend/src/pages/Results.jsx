@@ -137,7 +137,7 @@ function Results() {
         </div>
 
         <button onClick={() => navigate('/')} className="new-quiz-btn">
-          Generate New Quiz
+          Go to Dashboard
         </button>
       </div>
     </div>

@@ -1,94 +1,43 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { getUser, removeTokens, removeUser } from '../utils/auth';
+import { Link, useNavigate } from "react-router-dom";
+import "./Navbar.css";
+import { removeTokens } from "../utils/auth";
 
-const Navbar = () => {
+function Navbar() {
   const navigate = useNavigate();
-  const user = getUser();
+  // navigation-only: generation handled on its dedicated page
 
   const handleLogout = () => {
+    // Clear tokens and user
     removeTokens();
-    removeUser();
+    localStorage.removeItem('user');
     navigate('/login');
   };
 
+  const handleGenerate = () => {
+    // Navigate to the generate-quiz page where the user can pick domain/subdomain/level
+    navigate('/generate-quiz');
+  };
+
   return (
-    <nav style={styles.navbar}>
-      <div style={styles.navLeft}>
-        <span style={styles.userName}>
-          Welcome, {user?.username || user?.first_name || 'User'}!
-        </span>
-      </div>
-      
-      <div style={styles.navRight}>
-        <Link to="/home" style={styles.navLink}>Home</Link>
-        <Link to="/history" style={styles.navLink}>History</Link>
-        <Link to="/profile" style={styles.navLink}>Profile</Link>
-        <button onClick={handleLogout} style={styles.logoutBtn}>
-          Logout
-        </button>
-      </div>
+    <nav className="navbar">
+      <div className="navbar-brand">QuizGen</div>
+      <ul className="navbar-links">
+        <li><Link to="/">Dashboard</Link></li>
+        <li><Link to="/history">History</Link></li>
+        <li><Link to="/profile">Profile</Link></li>
+        
+        <li>
+          <button
+            onClick={handleGenerate}
+            className="generate-link"
+          >
+            Generate Quiz
+          </button>
+        </li>
+      </ul>
+      <button className="logout-btn" onClick={handleLogout}>Logout</button>
     </nav>
   );
-};
-
-const styles = {
-  navbar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '1rem 2rem',
-    backgroundColor: '#ffffff',
-    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-    borderBottom: '2px solid #e6f7ff',
-  },
-  navLeft: {
-    fontSize: '1.2rem',
-    fontWeight: '600',
-    color: '#256178',
-  },
-  userName: {
-    color: '#333333',
-  },
-  navRight: {
-    display: 'flex',
-    gap: '1.5rem',
-    alignItems: 'center',
-  },
-  navLink: {
-    textDecoration: 'none',
-    color: '#333333',
-    fontWeight: '500',
-    padding: '0.5rem 1rem',
-    borderRadius: '8px',
-    transition: 'all 0.3s ease',
-  },
-  logoutBtn: {
-    backgroundColor: '#ff6b6b',
-    color: 'white',
-    border: 'none',
-    padding: '0.5rem 1rem',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: '500',
-    transition: 'all 0.3s ease',
-  },
-};
-
-// Add hover effects
-document.addEventListener('DOMContentLoaded', function() {
-  const style = document.createElement('style');
-  style.textContent = `
-    a[style*="navLink"]:hover {
-      background-color: #f0faff !important;
-      color: #256178 !important;
-    }
-    button[style*="logoutBtn"]:hover {
-      background-color: #ff5252 !important;
-      transform: translateY(-1px);
-    }
-  `;
-  document.head.appendChild(style);
-});
+}
 
 export default Navbar;

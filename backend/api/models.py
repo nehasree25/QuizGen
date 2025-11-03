@@ -1,3 +1,23 @@
 from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+import json
 
-# Create your models here.
+class QuizHistory(models.Model):
+    STATUS_CHOICES = [
+        ('incomplete', 'Incomplete'),
+        ('completed', 'Completed'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    domain = models.CharField(max_length=100)
+    sub_domain = models.CharField(max_length=100)
+    questions = models.JSONField()  # stores the full quiz questions JSON
+    score = models.FloatField(null=True, blank=True)  # store quiz score
+    user_answers = models.JSONField(null=True, blank=True)  # store user's answers
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='incomplete')
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.domain}/{self.sub_domain} ({self.status})"
