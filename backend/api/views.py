@@ -1,29 +1,25 @@
 from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from django.shortcuts import get_object_or_404
 from .serializers import QuizGenerationSerializer, QuizHistorySerializer, ResumeQuizSerializer
 from .models import QuizHistory
 from .services import AIService
 
 
-@swagger_auto_schema(
-    method='post',
-    operation_description="Generate quiz using AI",
-    request_body=QuizGenerationSerializer,
-)
+# ---------- Generate Quiz ----------
+@swagger_auto_schema(method='post', request_body=QuizGenerationSerializer)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def generate_quiz(request):
     serializer = QuizGenerationSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
     data = serializer.validated_data
 
-    # Check if there’s an incomplete quiz already
+    # Check if an incomplete quiz exists
     existing_quiz = QuizHistory.objects.filter(
         user=request.user,
         domain=data['domain'],
@@ -33,12 +29,14 @@ def generate_quiz(request):
 
     if existing_quiz:
         return Response({
-            "message": "Incomplete quiz found. Please resume instead.",
+            "message": "Incomplete quiz found. Resuming...",
             "quiz_id": existing_quiz.id,
-            "questions": existing_quiz.questions
+            "questions": existing_quiz.questions,
+            "user_answers": existing_quiz.user_answers or [],
+            "current_question_index": existing_quiz.current_question_index or 0,
         }, status=status.HTTP_200_OK)
 
-    # Generate new quiz via AI
+    # Otherwise, generate a new quiz using AI
     ai_service = AIService()
     result = ai_service.generate_quiz_questions(
         domain=data['domain'],
@@ -50,68 +48,88 @@ def generate_quiz(request):
     if isinstance(result, dict) and 'error' in result:
         return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # Save new quiz to history
     quiz = QuizHistory.objects.create(
         user=request.user,
         domain=data['domain'],
         sub_domain=data['sub_domain'],
         questions=result,
+        user_answers=[],
+        current_question_index=0,
         status='incomplete'
     )
 
     return Response({
-        "message": "Quiz generated and saved to history.",
+        "message": "New quiz generated.",
         "quiz_id": quiz.id,
-        "questions": result
+        "questions": result,
+        "user_answers": [],
+        "current_question_index": 0,
     }, status=status.HTTP_200_OK)
 
 
+# ---------- Save Quiz Progress ----------
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def save_quiz_progress(request, quiz_id):
+    """
+    Save user's current progress (answers + question index).
+    """
+    quiz = get_object_or_404(QuizHistory, id=quiz_id, user=request.user)
+    data = request.data
+
+    quiz.user_answers = data.get('user_answers', quiz.user_answers)
+    quiz.current_question_index = data.get('current_question_index', quiz.current_question_index)
+    quiz.save(update_fields=['user_answers', 'current_question_index', 'updated_at'])
+
+    return Response({"message": "Progress saved successfully."}, status=status.HTTP_200_OK)
+
+
+# ---------- Mark Quiz Complete ----------
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def mark_quiz_complete(request, quiz_id):
-    try:
-        quiz = QuizHistory.objects.get(id=quiz_id, user=request.user)
-        data = request.data
+    """
+    Mark quiz as completed and calculate score (order-insensitive, case-insensitive).
+    """
+    quiz = get_object_or_404(QuizHistory, id=quiz_id, user=request.user)
+    data = request.data
 
-        if 'user_answers' in data:
-            user_answers = data['user_answers']
-            quiz.user_answers = user_answers
-            
-            total_questions = len(quiz.questions)
-            correct_count = 0
+    if 'user_answers' in data:
+        user_answers = data['user_answers']
+        quiz.user_answers = user_answers
 
-            for i, question in enumerate(quiz.questions):
-                if i < len(user_answers):
-                    user_ans = set(user_answers[i])
-                    correct_ans = set(question.get('correct_answers', []))
-                    if user_ans == correct_ans:
-                        correct_count += 1
+        total_questions = len(quiz.questions)
+        correct_count = 0
 
-            quiz.score = (correct_count / total_questions) * 100 if total_questions > 0 else 0
+        for i, question in enumerate(quiz.questions):
+            if i < len(user_answers):
+                normalize = lambda arr: set(str(a).strip().lower() for a in arr)
+                user_ans = normalize(user_answers[i])
+                correct_ans = normalize(question.get('correct_answers', []))
+                if user_ans == correct_ans:
+                    correct_count += 1
 
-        quiz.status = 'completed'
-        quiz.save()
+        quiz.score = round((correct_count / total_questions) * 100, 2) if total_questions > 0 else 0
 
-        serializer = QuizHistorySerializer(quiz)
-        return Response({
-            "message": "Quiz marked as completed.",
-            **serializer.data
-        }, status=status.HTTP_200_OK)
-    except QuizHistory.DoesNotExist:
-        return Response({"error": "Quiz not found."}, status=status.HTTP_404_NOT_FOUND)
+    quiz.status = 'completed'
+    quiz.current_question_index = len(quiz.questions)
+    quiz.save()
+
+    serializer = QuizHistorySerializer(quiz)
+    return Response({
+        "message": "Quiz completed successfully.",
+        **serializer.data
+    }, status=status.HTTP_200_OK)
 
 
+# ---------- Get Quiz History ----------
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_quiz_history(request):
-    """
-    Get all quiz history for a user (with optional domain/sub-domain filter)
-    """
     domain = request.query_params.get('domain')
     sub_domain = request.query_params.get('sub_domain')
 
     quizzes = QuizHistory.objects.filter(user=request.user)
-
     if domain:
         quizzes = quizzes.filter(domain=domain)
     if sub_domain:
@@ -121,18 +139,18 @@ def get_quiz_history(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+# ---------- Resume Quiz ----------
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def resume_quiz(request):
     """
-    Resume an incomplete quiz based on domain and sub-domain
+    Resume the last incomplete quiz.
     """
     serializer = ResumeQuizSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     data = serializer.validated_data
-
     quiz = QuizHistory.objects.filter(
         user=request.user,
         domain=data['domain'],
@@ -146,5 +164,7 @@ def resume_quiz(request):
     return Response({
         "quiz_id": quiz.id,
         "questions": quiz.questions,
-        "status": quiz.status
+        "user_answers": quiz.user_answers or [],
+        "current_question_index": quiz.current_question_index or 0,
+        "status": quiz.status,
     }, status=status.HTTP_200_OK)

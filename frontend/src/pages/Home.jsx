@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   PieChart,
   Pie,
   Cell,
@@ -11,6 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  CartesianGrid,
 } from "recharts";
 import "../App.css";
 
@@ -22,7 +23,7 @@ function Home() {
     scores: [],
     maxScore: 0,
     minScore: 0,
-    averageScore: 0
+    averageScore: 0,
   });
 
   const [loading, setLoading] = useState(true);
@@ -31,34 +32,43 @@ function Home() {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const { authFetch } = await import('../utils/auth');
-        const resp = await authFetch('/quiz-history/');
+        const { authFetch } = await import("../utils/auth");
+        const resp = await authFetch("/quiz-history/");
         if (!resp.ok) {
-          console.error('Failed to fetch quiz history for stats', resp.status);
-          setStats(prev => ({ ...prev }));
+          console.error("Failed to fetch quiz history for stats", resp.status);
           return;
         }
 
         const data = await resp.json();
-        const quizzes = Array.isArray(data) ? data : (data.results || []);
+        const quizzes = Array.isArray(data) ? data : data.results || [];
 
         const total = quizzes.length;
-        const completed = quizzes.filter(q => q.completed || (q.status && q.status.toLowerCase() === 'completed')).length;
+        const completed = quizzes.filter(
+          (q) =>
+            q.completed || (q.status && q.status.toLowerCase() === "completed")
+        ).length;
         const incomplete = total - completed;
 
         const scoresList = quizzes
-          .filter(q => q.score !== null && q.score !== undefined)
-          .map(q => ({
-            quiz: q.domain
-              ? `${q.domain} - ${q.sub_domain || q.subDomain || ''}`
-              : (q.title || q.name || `Quiz ${q.id}`),
-            score: q.score
+          .filter((q) => q.score !== null && q.score !== undefined)
+          .map((q, index) => ({
+            quiz: `Quiz ${index + 1}`,
+            score: q.score,
           }));
 
-        const maxScore = scoresList.length ? Math.max(...scoresList.map(s => s.score)) : 0;
-        const minScore = scoresList.length ? Math.min(...scoresList.map(s => s.score)) : 0;
+        const maxScore = scoresList.length
+          ? Math.max(...scoresList.map((s) => s.score))
+          : 0;
+        const minScore = scoresList.length
+          ? Math.min(...scoresList.map((s) => s.score))
+          : 0;
         const averageScore = scoresList.length
-          ? parseFloat((scoresList.reduce((sum, s) => sum + s.score, 0) / scoresList.length).toFixed(1))
+          ? parseFloat(
+              (
+                scoresList.reduce((sum, s) => sum + s.score, 0) /
+                scoresList.length
+              ).toFixed(1)
+            )
           : 0;
 
         setStats({
@@ -68,10 +78,10 @@ function Home() {
           scores: scoresList,
           maxScore,
           minScore,
-          averageScore
+          averageScore,
         });
       } catch (error) {
-        console.error('Error fetching stats:', error);
+        console.error("Error fetching stats:", error);
       } finally {
         setLoading(false);
       }
@@ -127,22 +137,39 @@ function Home() {
 
             {/* ===== Charts Section ===== */}
             <div className="charts-container">
+              {/* ===== Line Chart (Performance Overview) ===== */}
               <div className="chart-box">
                 <h3>Performance Overview</h3>
                 {stats.scores && stats.scores.length ? (
                   <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={stats.scores}>
-                      <XAxis dataKey="quiz" tick={false} />
+                    <LineChart
+                      data={stats.scores}
+                      margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      {/* Hidden X-axis (no names shown) */}
+                      <XAxis dataKey="quiz" tick={false} axisLine={false} />
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="score" fill="#00C49F" />
-                    </BarChart>
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke="#8884d8"
+                        strokeWidth={3}
+                        dot={{ r: 5 }}
+                        activeDot={{ r: 8 }}
+                      />
+                    </LineChart>
                   </ResponsiveContainer>
                 ) : (
                   <div
                     className="performance-stats"
-                    style={{ padding: "2rem", textAlign: "left", color: "#666" }}
+                    style={{
+                      padding: "2rem",
+                      textAlign: "left",
+                      color: "#666",
+                    }}
                   >
                     <h4>Quiz Performance Statistics</h4>
                     <ul style={{ listStyle: "none", padding: 0 }}>
@@ -160,6 +187,7 @@ function Home() {
                 )}
               </div>
 
+              {/* ===== Pie Chart (Completion) ===== */}
               <div className="chart-box">
                 <h3>Quiz Completion</h3>
                 <ResponsiveContainer width="100%" height={250}>

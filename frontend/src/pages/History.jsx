@@ -7,7 +7,7 @@ import { authFetch } from '../utils/auth';
 function History() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // 'all' | 'completed' | 'incomplete'
+  const [filter, setFilter] = useState('all');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,88 +34,64 @@ function History() {
     fetchHistory();
   }, []);
 
+  // ✅ Resume quiz properly with saved progress
   const openQuiz = async (quiz) => {
     try {
       const isCompleted = quiz.completed || (quiz.status && quiz.status.toLowerCase() === 'completed');
-      
-      // For completed quizzes, use data from history
+
+      // If quiz is completed → view results
       if (isCompleted) {
-        console.log('Opening completed quiz:', quiz);
-        if (!quiz.questions) {
-          console.error('No questions found in quiz data:', quiz);
-          alert('Quiz data is incomplete. Please try again.');
-          return;
-        }
         const questions = Array.isArray(quiz.questions) ? quiz.questions : [];
         const userAnswers = quiz.user_answers || [];
-        console.log('Quiz details:', { questionsCount: questions.length, userAnswersCount: userAnswers.length });
+
         if (!questions.length) {
-          alert('No questions found in this quiz. Please try again.');
+          alert('No questions found for this quiz.');
           return;
         }
-        navigate('/results', { state: { questions, userAnswers, quizId: quiz.id, domain: quiz.domain, sub_domain: quiz.sub_domain || quiz.subDomain } });
+
+        navigate('/results', {
+          state: {
+            questions,
+            userAnswers,
+            quizId: quiz.id,
+            domain: quiz.domain,
+            sub_domain: quiz.sub_domain,
+            score: quiz.score
+          },
+        });
         return;
       }
 
-      // For incomplete quizzes, try resume flow
-      const payload = { quiz_id: quiz.id };
-      if (quiz.domain) payload.domain = quiz.domain;
-      if (quiz.sub_domain) payload.sub_domain = quiz.sub_domain;
-      if (quiz.subDomain) payload.sub_domain = payload.sub_domain || quiz.subDomain;
-
-      const r = await authFetch('/resume-quiz/', {
+      // ✅ Resume quiz from saved progress
+      const payload = { domain: quiz.domain, sub_domain: quiz.sub_domain };
+      const res = await authFetch('/resume-quiz/', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
 
-      if (r.status === 405) {
-        const getResp = await authFetch(`/resume-quiz/?quiz_id=${quiz.id}`);
-        if (!getResp.ok) {
-          const err = await getResp.text();
-          alert('Failed to fetch quiz: ' + err);
-          return;
-        }
-        const d = await getResp.json();
-        if (d) {
-          const questions = d.questions || d.question_list || [];
-          const resumeIndex = d.current_index || d.resume_index || 0;
-          const userAnswers = d.userAnswers || d.user_answers || [];
-          navigate('/quiz', { state: { questions, resumeIndex, userAnswers, quizId: quiz.id } });
-        }
+      if (!res.ok) {
+        alert('Failed to resume quiz.');
         return;
       }
 
-      if (!r.ok) {
-        const bodyText = await r.text().catch(() => null);
-        try {
-          const parsed = JSON.parse(bodyText || '{}');
-          const msg = parsed.message || parsed.detail || (typeof parsed === 'string' ? parsed : null);
-          if (msg && String(msg).toLowerCase().includes('no incomplete')) {
-            // Try to show completed data via mark-complete
-            const mc = await authFetch(`/mark-complete/${quiz.id}/`);
-            if (mc.ok) {
-              const mcData = await mc.json().catch(() => null);
-              if (mcData && (mcData.userAnswers || mcData.user_answers || mcData.questions)) {
-                const questions = mcData.questions || mcData.question_list || [];
-                const userAnswers = mcData.userAnswers || mcData.user_answers || [];
-                navigate('/results', { state: { questions, userAnswers } });
-                return;
-              }
-            }
-          }
-        } catch (e) {
-          // ignore JSON parse errors
-        }
+      const data = await res.json();
 
-        alert('Failed to fetch quiz: ' + (bodyText || r.status));
-        return;
-      }
+      // ✅ Use saved progress (current_question_index)
+      const questions = data.questions || [];
+      const resumeIndex = data.current_question_index || 0;
+      const userAnswers = data.user_answers || [];
 
-      const data = await r.json();
-      const questions = data.questions || data.question_list || [];
-      const resumeIndex = data.current_index || data.resume_index || 0;
-      const userAnswers = data.userAnswers || data.user_answers || [];
-      navigate('/quiz', { state: { questions, resumeIndex, userAnswers, quizId: quiz.id } });
+      navigate('/quiz', {
+        state: {
+          quizId: data.quiz_id,
+          questions,
+          resumeIndex,
+          userAnswers,
+          domain: quiz.domain,
+          sub_domain: quiz.sub_domain,
+        },
+      });
+
     } catch (err) {
       console.error('Error opening quiz:', err);
       alert('Failed to open quiz.');
@@ -129,49 +105,30 @@ function History() {
         <h1>Quiz History</h1>
 
         <main className="history-filter" style={{ marginBottom: '1rem' }}>
-          <div style={{ display: 'inline-flex', gap: '0.5rem', background: '#f6f7fb', padding: '6px', borderRadius: '8px' }}>
-            <button
-              className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-              onClick={() => setFilter('all')}
-              style={{
-                padding: '6px 12px',
-                border: '1px solid var(--primary-color)',
-                background: filter === 'all' ? 'var(--primary-color)' : 'transparent',
-                color: filter === 'all' ? '#fff' : 'var(--primary-color)',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              All
-            </button>
-            <button
-              className={`filter-btn ${filter === 'completed' ? 'active' : ''}`}
-              onClick={() => setFilter('completed')}
-              style={{
-                padding: '6px 12px',
-                border: '1px solid var(--primary-color)',
-                background: filter === 'completed' ? 'var(--primary-color)' : 'transparent',
-                color: filter === 'completed' ? '#fff' : 'var(--primary-color)',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              Completed
-            </button>
-            <button
-              className={`filter-btn ${filter === 'incomplete' ? 'active' : ''}`}
-              onClick={() => setFilter('incomplete')}
-              style={{
-                padding: '6px 12px',
-                border: '1px solid var(--primary-color)',
-                background: filter === 'incomplete' ? 'var(--primary-color)' : 'transparent',
-                color: filter === 'incomplete' ? '#fff' : 'var(--primary-color)',
-                borderRadius: '6px',
-                cursor: 'pointer'
-              }}
-            >
-              Incomplete
-            </button>
+          <div style={{
+            display: 'inline-flex',
+            gap: '0.5rem',
+            background: '#f6f7fb',
+            padding: '6px',
+            borderRadius: '8px'
+          }}>
+            {['all', 'completed', 'incomplete'].map((type) => (
+              <button
+                key={type}
+                className={`filter-btn ${filter === type ? 'active' : ''}`}
+                onClick={() => setFilter(type)}
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid var(--primary-color)',
+                  background: filter === type ? 'var(--primary-color)' : 'transparent',
+                  color: filter === type ? '#fff' : 'var(--primary-color)',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
           </div>
         </main>
 
@@ -183,39 +140,63 @@ function History() {
               const isCompleted = q.completed || (q.status && String(q.status).toLowerCase() === 'completed');
               return filter === 'completed' ? isCompleted : !isCompleted;
             });
-            
+
             if (filtered.length === 0) {
-              let message = 'No quizzes';
-              if (filter === 'completed') {
-                message = 'No completed quizzes';
-              } else if (filter === 'incomplete') {
-                message = 'No incomplete quizzes';
-              }
+              const msg =
+                filter === 'completed'
+                  ? 'No completed quizzes'
+                  : filter === 'incomplete'
+                    ? 'No incomplete quizzes'
+                    : 'No quizzes found';
               return (
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'center', 
-                  alignItems: 'center', 
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
                   minHeight: '200px',
                   color: '#666'
                 }}>
-                  <p>{message}</p>
+                  <p>{msg}</p>
                 </div>
               );
             }
-            
+
             return filtered.map((quiz) => (
               quiz && (
                 <div
                   key={quiz.id}
-                  className={`history-card ${String(quiz.status || quiz.state || '').toLowerCase()}`}
+                  className={`history-card ${String(quiz.status || '').toLowerCase()}`}
+                  style={{
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    padding: '1rem',
+                    marginBottom: '1rem',
+                    background: '#fff',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+                  }}
                 >
-                  <h3>{(quiz.domain ? `${quiz.domain} - ${quiz.sub_domain || quiz.subDomain || ''}` : (quiz.title || quiz.name || `Quiz ${quiz.id}`)).trim()}</h3>
-                  <p>Status: {quiz.status || quiz.state || (quiz.completed ? 'Completed' : 'Incomplete')}</p>
-                  {quiz.score !== null && quiz.score !== undefined && <p>Score: {quiz.score}%</p>}
+                  <h3>{quiz.domain} - {quiz.sub_domain}</h3>
+                  <p>Status: {quiz.status}</p>
+                  {quiz.score !== null && quiz.score !== undefined && (
+                    <p>Score: {quiz.score.toFixed(2)}%</p>
+                  )}
+
+                  {/* ✅ Removed Date/Time line */}
+
                   <div style={{ marginTop: '0.5rem' }}>
-                    <button className="history-btn" onClick={() => openQuiz(quiz)}>
-                      {quiz.completed || (quiz.status && quiz.status.toLowerCase() === 'completed') ? 'View' : 'Resume'}
+                    <button
+                      className="history-btn"
+                      onClick={() => openQuiz(quiz)}
+                      style={{
+                        background: 'var(--primary-color)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {quiz.status && quiz.status.toLowerCase() === 'completed' ? 'View' : 'Resume'}
                     </button>
                   </div>
                 </div>
@@ -229,4 +210,3 @@ function History() {
 }
 
 export default History;
-

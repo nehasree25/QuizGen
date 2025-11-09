@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-import json
 
 class QuizHistory(models.Model):
     STATUS_CHOICES = [
@@ -12,9 +11,10 @@ class QuizHistory(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     domain = models.CharField(max_length=100)
     sub_domain = models.CharField(max_length=100)
-    questions = models.JSONField()  # stores the full quiz questions JSON
-    score = models.FloatField(null=True, blank=True)  # store quiz score
-    user_answers = models.JSONField(null=True, blank=True)  # store user's answers
+    questions = models.JSONField()
+    user_answers = models.JSONField(default=list, blank=True)
+    current_question_index = models.IntegerField(default=0)
+    score = models.FloatField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='incomplete')
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)

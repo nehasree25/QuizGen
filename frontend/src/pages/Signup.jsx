@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { setTokens, setUser } from '../utils/auth';
 import API_BASE_URL from '../config';
 
 const Signup = () => {
@@ -23,13 +22,53 @@ const Signup = () => {
     });
   };
 
+  // ✅ Validate password strength
+  const validatePassword = (password) => {
+    const minLength = /.{6,}/;
+    const upperCase = /[A-Z]/;
+    const lowerCase = /[a-z]/;
+    const number = /[0-9]/;
+    const specialChar = /[!@#$%^&*(),.?":{}|<>]/;
+
+    if (!minLength.test(password)) {
+      return "Password must be at least 6 characters long.";
+    }
+    if (!upperCase.test(password)) {
+      return "Password must contain at least one uppercase letter (A-Z).";
+    }
+    if (!lowerCase.test(password)) {
+      return "Password must contain at least one lowercase letter (a-z).";
+    }
+    if (!number.test(password)) {
+      return "Password must contain at least one number (0-9).";
+    }
+    if (!specialChar.test(password)) {
+      return "Password must contain at least one special symbol (!@#$%^&*).";
+    }
+    return null;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(''); // Clear old errors
+
+    // ✅ Password validation first (before loading state)
+    const passwordError = validatePassword(formData.password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
+    // ✅ Password match check
+    if (formData.password !== formData.password2) {
+      setError("Passwords do not match.");
+      return;
+    }
+
     setLoading(true);
-    setError('');
 
     try {
-  const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/auth/signup/`, {
+      const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/auth/signup/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,13 +79,11 @@ const Signup = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // Since your backend only returns success message, redirect to login
-        setError('✅ Signup successful! Please login.');
+        setError('Signup successful! Please login.');
         setTimeout(() => {
           navigate('/login');
         }, 2000);
       } else {
-        // Handle validation errors
         let errorMessage = 'Signup failed. Please check your input.';
         if (data.username && Array.isArray(data.username)) {
           errorMessage = `Username: ${data.username[0]}`;
@@ -59,7 +96,6 @@ const Signup = () => {
         } else if (data.detail) {
           errorMessage = data.detail;
         } else if (typeof data === 'object') {
-          // Try to get first error message
           const firstKey = Object.keys(data)[0];
           if (firstKey && data[firstKey] && Array.isArray(data[firstKey])) {
             errorMessage = `${firstKey}: ${data[firstKey][0]}`;
@@ -72,7 +108,7 @@ const Signup = () => {
     } catch (err) {
       setError('Failed to connect to server. Please try again.');
     }
-    
+
     setLoading(false);
   };
 
@@ -163,7 +199,7 @@ const Signup = () => {
           
           {error && (
             <div className="error-message">
-              {error}
+              <center><div>{error}</div></center>
             </div>
           )}
 

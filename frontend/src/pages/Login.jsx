@@ -25,20 +25,23 @@ const Login = () => {
     setError('');
 
     try {
-  const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/auth/login/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await fetch(
+        `${API_BASE_URL.replace(/\/$/, '')}/auth/login/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        }
+      );
 
       const data = await response.json();
 
       if (response.ok) {
         // Store JWT tokens
         setTokens(data.access, data.refresh);
-        
+
         // Fetch user profile after login
         try {
           const profileResponse = await authFetch('/auth/profile/');
@@ -49,15 +52,24 @@ const Login = () => {
         } catch (profileError) {
           console.log('Profile fetch failed:', profileError);
         }
-        
+
         navigate('/home');
       } else {
-        setError(data.detail || 'Login failed. Please check your credentials.');
+        // Handle specific backend error messages
+        if (data.detail === 'No username or email found.') {
+          setError('❌ No username or email found.');
+        } else if (data.detail === 'Incorrect password.') {
+          setError('❌ Incorrect password.');
+        } else if (data.detail) {
+          setError(`❌ ${data.detail}`);
+        } else {
+          setError('❌ Login failed. Please check your credentials.');
+        }
       }
     } catch (err) {
-      setError('Failed to connect to server. Please try again.');
+      setError('❌ Failed to connect to server. Please try again.');
     }
-    
+
     setLoading(false);
   };
 
@@ -70,51 +82,51 @@ const Login = () => {
         <form onSubmit={handleSubmit} className="quiz-form">
           <div className="form-group">
             <label>Username or Email:</label>
-            <input 
+            <input
               type="text"
               name="username"
               value={formData.username}
               onChange={handleChange}
-              required 
+              required
               placeholder="Enter your username or email"
             />
           </div>
-          
+
           <div className="form-group">
             <label>Password:</label>
-            <input 
+            <input
               type="password"
               name="password"
               value={formData.password}
               onChange={handleChange}
-              required 
+              required
               placeholder="Enter your password"
             />
           </div>
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             disabled={loading}
             className="generate-btn"
           >
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
-          
+
           {error && (
-            <div className="error-message">
-              ❌ {error}
+            <div className="error-message" style={{ marginTop: '1rem' }}>
+              <center>{error}</center>
             </div>
           )}
 
           <div style={{ textAlign: 'center', marginTop: '1rem' }}>
             <span style={{ color: '#666' }}>
               Don't have an account?{' '}
-              <Link 
-                to="/signup" 
-                style={{ 
-                  color: 'var(--primary-color)', 
+              <Link
+                to="/signup"
+                style={{
+                  color: 'var(--primary-color)',
                   textDecoration: 'none',
-                  fontWeight: '600'
+                  fontWeight: '600',
                 }}
               >
                 Sign up

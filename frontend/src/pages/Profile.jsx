@@ -52,13 +52,47 @@ const Profile = () => {
   const handleEditChange = (e) =>
     setEditData({ ...editData, [e.target.name]: e.target.value });
 
+  // ✅ Password strength validation function
+  const validatePassword = (password) => {
+    const minLength = /.{6,}/;
+    const upperCase = /[A-Z]/;
+    const lowerCase = /[a-z]/;
+    const number = /[0-9]/;
+    const specialChar = /[!@#$%^&*(),.?":{}|<>]/;
+
+    if (!minLength.test(password)) {
+      return "Password must be at least 6 characters long.";
+    }
+    if (!upperCase.test(password)) {
+      return "Password must contain at least one uppercase letter (A-Z).";
+    }
+    if (!lowerCase.test(password)) {
+      return "Password must contain at least one lowercase letter (a-z).";
+    }
+    if (!number.test(password)) {
+      return "Password must contain at least one number (0-9).";
+    }
+    if (!specialChar.test(password)) {
+      return "Password must contain at least one special symbol (!@#$%^&*).";
+    }
+    return null;
+  };
+
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     setPasswordError('');
     setPasswordSuccess('');
 
+    // ✅ Check if new passwords match
     if (passwordData.new_password !== passwordData.new_password2) {
-      setPasswordError('New passwords do not match');
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+
+    // ✅ Check password strength
+    const validationError = validatePassword(passwordData.new_password);
+    if (validationError) {
+      setPasswordError(validationError);
       return;
     }
 
@@ -96,7 +130,7 @@ const Profile = () => {
         setPasswordError(errorMessage);
       }
     } catch (error) {
-      setPasswordError('Failed to connect to server');
+      setPasswordError('Failed to connect to server.');
     }
   };
 
@@ -122,7 +156,7 @@ const Profile = () => {
         setProfileError(errorData.error || errorData.detail || 'Failed to update profile');
       }
     } catch (error) {
-      setProfileError('Failed to connect to server');
+      setProfileError('Failed to connect to server.');
     }
   };
 

@@ -12,9 +12,6 @@ function GenerateQuiz() {
   const [numberOfQuestions, setNumberOfQuestions] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [generatedQuestions, setGeneratedQuestions] = useState(null);
-  const [generatedQuizId, setGeneratedQuizId] = useState(null);
-  const [totalQuestions, setTotalQuestions] = useState(0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +21,6 @@ function GenerateQuiz() {
       return;
     }
 
-    // Validate number of questions before making the request
     if (numberOfQuestions > 20) {
       setError('Number of questions must be 20 or less');
       return;
@@ -37,12 +33,12 @@ function GenerateQuiz() {
 
     setLoading(true);
     try {
-        const payload = {
-          domain,
-          sub_domain: subDomain,
-          number_of_questions: Number(numberOfQuestions) || 10,
-          level,
-        };
+      const payload = {
+        domain,
+        sub_domain: subDomain,
+        number_of_questions: Number(numberOfQuestions) || 10,
+        level,
+      };
 
       const resp = await authFetch('/generate-quiz/', {
         method: 'POST',
@@ -51,12 +47,9 @@ function GenerateQuiz() {
 
       if (!resp.ok) {
         const body = await resp.json().catch(() => null);
-        
-        // Handle specific validation errors
         if (body && body.number_of_questions) {
           setError('Number of questions must be 20 or less');
         } else if (body && typeof body === 'object') {
-          // Handle other field-specific errors
           const errorMessages = Object.entries(body)
             .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages[0] : messages}`)
             .join(', ');
@@ -69,19 +62,25 @@ function GenerateQuiz() {
 
       const data = await resp.json();
       const questions = data.questions || data.question_list || data.questions_list || [];
-      const resumeIndex = data.current_index || data.resume_index || 0;
       const quizId = data.quiz_id || data.id || null;
-      const total = data.total_questions || data.total || questions.length;
 
       if (!questions.length) {
         setError('No questions returned from server.');
         return;
       }
 
-      // Store generated data and show a summary so user can start when ready
-      setGeneratedQuestions({ questions, resumeIndex });
-      setGeneratedQuizId(quizId);
-      setTotalQuestions(total);
+      // ✅ Directly navigate to the quiz page (no Start Quiz step)
+      navigate('/quiz', {
+        state: {
+          questions,
+          quizId,
+          currentIndex: 0,
+          domain,
+          sub_domain: subDomain,
+          level,
+        },
+      });
+
     } catch (err) {
       console.error('Generate quiz error:', err);
       setError('Failed to generate quiz. Please try again.');
@@ -93,8 +92,6 @@ function GenerateQuiz() {
   const handleNumberOfQuestionsChange = (e) => {
     const value = e.target.value;
     setNumberOfQuestions(value);
-    
-    // Clear error when user starts correcting the value
     if (error && error.includes('Number of questions')) {
       setError('');
     }
@@ -153,11 +150,10 @@ function GenerateQuiz() {
                 onChange={handleNumberOfQuestionsChange}
                 required
               />
-              {/* <div className="input-hint">Maximum 20 questions allowed</div> */}
             </div>
 
             <button type="submit" disabled={loading} className="generate-btn">
-              {loading ? 'Generating...' : 'Generate'}
+              {loading ? 'Generating...' : 'Generate Quiz'}
             </button>
 
             {error && (
@@ -166,21 +162,6 @@ function GenerateQuiz() {
               </div>
             )}
           </form>
-
-          {generatedQuestions && (
-            <div style={{ marginTop: 18, textAlign: 'center' }}>
-              <p><strong>Questions generated:</strong> {totalQuestions}</p>
-              <p>Ready to start the quiz with {generatedQuestions.questions.length} questions.</p>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 8 }}>
-                <button
-                  className="generate-btn"
-                  onClick={() => navigate('/quiz', { state: { ...generatedQuestions, quizId: generatedQuizId } })}
-                >
-                  Start Quiz
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
