@@ -52,7 +52,6 @@ const Profile = () => {
   const handleEditChange = (e) =>
     setEditData({ ...editData, [e.target.name]: e.target.value });
 
-  // ✅ Password strength validation function
   const validatePassword = (password) => {
     const minLength = /.{6,}/;
     const upperCase = /[A-Z]/;
@@ -60,21 +59,11 @@ const Profile = () => {
     const number = /[0-9]/;
     const specialChar = /[!@#$%^&*(),.?":{}|<>]/;
 
-    if (!minLength.test(password)) {
-      return "Password must be at least 6 characters long.";
-    }
-    if (!upperCase.test(password)) {
-      return "Password must contain at least one uppercase letter (A-Z).";
-    }
-    if (!lowerCase.test(password)) {
-      return "Password must contain at least one lowercase letter (a-z).";
-    }
-    if (!number.test(password)) {
-      return "Password must contain at least one number (0-9).";
-    }
-    if (!specialChar.test(password)) {
-      return "Password must contain at least one special symbol (!@#$%^&*).";
-    }
+    if (!minLength.test(password)) return "Password must be at least 6 characters long.";
+    if (!upperCase.test(password)) return "Password must contain at least one uppercase letter (A-Z).";
+    if (!lowerCase.test(password)) return "Password must contain at least one lowercase letter (a-z).";
+    if (!number.test(password)) return "Password must contain at least one number (0-9).";
+    if (!specialChar.test(password)) return "Password must contain at least one special symbol (!@#$%^&*).";
     return null;
   };
 
@@ -83,13 +72,11 @@ const Profile = () => {
     setPasswordError('');
     setPasswordSuccess('');
 
-    // ✅ Check if new passwords match
     if (passwordData.new_password !== passwordData.new_password2) {
       setPasswordError('New passwords do not match.');
       return;
     }
 
-    // ✅ Check password strength
     const validationError = validatePassword(passwordData.new_password);
     if (validationError) {
       setPasswordError(validationError);
@@ -104,6 +91,7 @@ const Profile = () => {
 
       if (response.ok) {
         setPasswordSuccess('Password updated successfully!');
+        alert('Password updated successfully!'); // ✅ Alert added
         setPasswordData({
           old_password: '',
           new_password: '',
@@ -148,6 +136,7 @@ const Profile = () => {
       if (response.ok) {
         const data = await response.json();
         setProfileSuccess('Profile updated successfully!');
+        alert('Profile updated successfully!'); // ✅ Alert added
         setUserData(data);
         setUser(data);
         setShowEditProfile(false);
@@ -198,7 +187,7 @@ const Profile = () => {
           </div>
 
           <div style={styles.actionsGrid}>
-            {/* Edit Profile Section */}
+            {/* Edit Profile */}
             <div style={styles.actionCard}>
               <div style={styles.actionHeader}>
                 <h3 style={styles.actionTitle}>Edit Profile</h3>
@@ -244,7 +233,7 @@ const Profile = () => {
               )}
             </div>
 
-            {/* Change Password Section */}
+            {/* Change Password */}
             <div style={styles.actionCard}>
               <div style={styles.actionHeader}>
                 <h3 style={styles.actionTitle}>Change Password</h3>
@@ -316,11 +305,7 @@ const styles = {
     background: 'linear-gradient(135deg, #E6F3FF, #F0F8FF)',
     backgroundAttachment: 'fixed',
   },
-  content: {
-    padding: '2rem',
-    display: 'flex',
-    justifyContent: 'center',
-  },
+  content: { padding: '2rem', display: 'flex', justifyContent: 'center' },
   profileCard: {
     background: 'rgba(255, 255, 255, 0.9)',
     padding: '2.5rem',
@@ -331,107 +316,24 @@ const styles = {
     backdropFilter: 'blur(8px)',
     border: '2px solid #B8DCF5',
   },
-  title: {
-    color: '#2C3E50',
-    textAlign: 'center',
-    fontSize: '2.2rem',
-    fontWeight: '700',
-    marginBottom: '2rem',
-  },
-  userInfo: {
-    background: '#F8FBFF',
-    border: '2px solid #B8DCF5',
-    borderRadius: '15px',
-    padding: '1.5rem',
-    marginBottom: '2rem',
-  },
-  infoItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '0.7rem 0',
-    borderBottom: '1px solid #E6F3FF',
-  },
+  title: { color: '#2C3E50', textAlign: 'center', fontSize: '2.2rem', fontWeight: '700', marginBottom: '2rem' },
+  userInfo: { background: '#F8FBFF', border: '2px solid #B8DCF5', borderRadius: '15px', padding: '1.5rem', marginBottom: '2rem' },
+  infoItem: { display: 'flex', justifyContent: 'space-between', padding: '0.7rem 0', borderBottom: '1px solid #E6F3FF' },
   label: { fontWeight: '600', color: '#2C3E50' },
   value: { color: '#34495E', fontWeight: '500' },
-  actionsGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '1.5rem',
-    alignItems: 'start',
-  },
-  actionCard: {
-    background: 'rgba(255,255,255,0.8)',
-    borderRadius: '15px',
-    padding: '1.5rem',
-    border: '2px solid #B8DCF5',
-    boxShadow: '0 6px 20px rgba(94,180,232,0.15)',
-    height: 'auto',
-  },
-  actionHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '1rem',
-  },
+  actionsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' },
+  actionCard: { background: 'rgba(255,255,255,0.8)', borderRadius: '15px', padding: '1.5rem', border: '2px solid #B8DCF5', boxShadow: '0 6px 20px rgba(94,180,232,0.15)', height: 'auto' },
+  actionHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' },
   actionTitle: { color: '#5EB4E8', fontWeight: '600', fontSize: '1.2rem' },
-  toggleButton: {
-    background: '#5EB4E8',
-    color: '#ffffff',
-    border: '1px solid #8BC8F0',
-    borderRadius: '10px',
-    padding: '0.6rem 1.2rem',
-    cursor: 'pointer',
-    transition: '0.3s',
-  },
+  toggleButton: { background: '#5EB4E8', color: '#ffffff', border: '1px solid #8BC8F0', borderRadius: '10px', padding: '0.6rem 1.2rem', cursor: 'pointer', transition: '0.3s' },
   formGroup: { marginBottom: '1rem' },
   formLabel: { color: '#2C3E50', fontWeight: '600', marginBottom: '0.4rem' },
-  input: {
-    width: '100%',
-    padding: '0.8rem',
-    borderRadius: '10px',
-    border: '2px solid #B8DCF5',
-    outline: 'none',
-    fontSize: '0.95rem',
-    backgroundColor: '#F8FBFF',
-  },
-  primaryButton: {
-    background: '#5EB4E8',
-    color: '#fff',
-    border: '1px solid #8BC8F0',
-    borderRadius: '12px',
-    padding: '0.8rem 1.5rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: '0.3s',
-  },
-  errorMessage: {
-    background: '#FFE6E6',
-    color: '#E74C3C',
-    borderRadius: '10px',
-    padding: '0.6rem',
-    marginTop: '0.5rem',
-    textAlign: 'center',
-    border: '1px solid #E74C3C',
-  },
-  successMessage: {
-    background: '#E6F3FF',
-    color: '#2C3E50',
-    borderRadius: '10px',
-    padding: '0.6rem',
-    marginTop: '0.5rem',
-    textAlign: 'center',
-    border: '1px solid #5EB4E8',
-  },
-  loadingContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '50vh',
-  },
-  loadingText: {
-    color: '#5EB4E8',
-    fontSize: '1.2rem',
-    fontWeight: '600',
-  },
+  input: { width: '100%', padding: '0.8rem', borderRadius: '10px', border: '2px solid #B8DCF5', outline: 'none', fontSize: '0.95rem', backgroundColor: '#F8FBFF' },
+  primaryButton: { background: '#5EB4E8', color: '#fff', border: '1px solid #8BC8F0', borderRadius: '12px', padding: '0.8rem 1.5rem', fontWeight: '600', cursor: 'pointer', transition: '0.3s' },
+  errorMessage: { background: '#FFE6E6', color: '#E74C3C', borderRadius: '10px', padding: '0.6rem', marginTop: '0.5rem', textAlign: 'center', border: '1px solid #E74C3C' },
+  successMessage: { background: '#E6F3FF', color: '#2C3E50', borderRadius: '10px', padding: '0.6rem', marginTop: '0.5rem', textAlign: 'center', border: '1px solid #5EB4E8' },
+  loadingContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' },
+  loadingText: { color: '#5EB4E8', fontSize: '1.2rem', fontWeight: '600' },
 };
 
 export default Profile;
