@@ -176,14 +176,34 @@ function History() {
         </main>
 
         <div className="history-list">
-          {loading && <p>Loading...</p>}
-          {!loading && history.length === 0 && <p style={{ color: '#666' }}>No quizzes.</p>}
+          {loading && <p style={{ textAlign: 'center', color: '#666' }}>Loading...</p>}
           {!loading && (() => {
             const filtered = history.filter(q => {
               if (filter === 'all') return true;
               const isCompleted = q.completed || (q.status && String(q.status).toLowerCase() === 'completed');
               return filter === 'completed' ? isCompleted : !isCompleted;
             });
+            
+            if (filtered.length === 0) {
+              let message = 'No quizzes';
+              if (filter === 'completed') {
+                message = 'No completed quizzes';
+              } else if (filter === 'incomplete') {
+                message = 'No incomplete quizzes';
+              }
+              return (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  minHeight: '200px',
+                  color: '#666'
+                }}>
+                  <p>{message}</p>
+                </div>
+              );
+            }
+            
             return filtered.map((quiz) => (
               quiz && (
                 <div

@@ -77,13 +77,23 @@ const Profile = () => {
         });
         setShowChangePassword(false);
       } else {
-        const errorData = await response.json();
-        setPasswordError(
-          errorData.old_password?.[0] ||
-          errorData.new_password?.[0] ||
-          errorData.detail ||
-          'Failed to update password'
-        );
+        const errorData = await response.json().catch(() => ({}));
+        let errorMessage = 'Failed to update password';
+        if (errorData.old_password && Array.isArray(errorData.old_password)) {
+          errorMessage = errorData.old_password[0];
+        } else if (errorData.new_password && Array.isArray(errorData.new_password)) {
+          errorMessage = errorData.new_password[0];
+        } else if (errorData.new_password2 && Array.isArray(errorData.new_password2)) {
+          errorMessage = errorData.new_password2[0];
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (typeof errorData === 'object') {
+          const firstKey = Object.keys(errorData)[0];
+          if (firstKey && errorData[firstKey] && Array.isArray(errorData[firstKey])) {
+            errorMessage = errorData[firstKey][0];
+          }
+        }
+        setPasswordError(errorMessage);
       }
     } catch (error) {
       setPasswordError('Failed to connect to server');

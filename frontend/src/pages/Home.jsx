@@ -31,7 +31,8 @@ function Home() {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const resp = await (await import('../utils/auth')).authFetch('/quiz-history/');
+        const { authFetch } = await import('../utils/auth');
+        const resp = await authFetch('/quiz-history/');
         if (!resp.ok) {
           console.error('Failed to fetch quiz history for stats', resp.status);
           setStats(prev => ({ ...prev }));
@@ -57,7 +58,7 @@ function Home() {
         const maxScore = scoresList.length ? Math.max(...scoresList.map(s => s.score)) : 0;
         const minScore = scoresList.length ? Math.min(...scoresList.map(s => s.score)) : 0;
         const averageScore = scoresList.length
-          ? (scoresList.reduce((sum, s) => sum + s.score, 0) / scoresList.length).toFixed(1)
+          ? parseFloat((scoresList.reduce((sum, s) => sum + s.score, 0) / scoresList.length).toFixed(1))
           : 0;
 
         setStats({
@@ -131,7 +132,7 @@ function Home() {
                 {stats.scores && stats.scores.length ? (
                   <ResponsiveContainer width="100%" height={250}>
                     <BarChart data={stats.scores}>
-                      <XAxis dataKey="quiz" />
+                      <XAxis dataKey="quiz" tick={false} />
                       <YAxis />
                       <Tooltip />
                       <Legend />

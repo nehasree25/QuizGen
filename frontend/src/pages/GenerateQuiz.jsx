@@ -24,6 +24,17 @@ function GenerateQuiz() {
       return;
     }
 
+    // Validate number of questions before making the request
+    if (numberOfQuestions > 20) {
+      setError('Number of questions must be 20 or less');
+      return;
+    }
+
+    if (numberOfQuestions < 1) {
+      setError('Number of questions must be at least 1');
+      return;
+    }
+
     setLoading(true);
     try {
         const payload = {
@@ -40,7 +51,19 @@ function GenerateQuiz() {
 
       if (!resp.ok) {
         const body = await resp.json().catch(() => null);
-        setError(body ? JSON.stringify(body) : `Server error ${resp.status}`);
+        
+        // Handle specific validation errors
+        if (body && body.number_of_questions) {
+          setError('Number of questions must be 20 or less');
+        } else if (body && typeof body === 'object') {
+          // Handle other field-specific errors
+          const errorMessages = Object.entries(body)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages[0] : messages}`)
+            .join(', ');
+          setError(errorMessages || 'Please check your input values');
+        } else {
+          setError(body ? JSON.stringify(body) : `Server error ${resp.status}`);
+        }
         return;
       }
 
@@ -61,9 +84,19 @@ function GenerateQuiz() {
       setTotalQuestions(total);
     } catch (err) {
       console.error('Generate quiz error:', err);
-      setError('Failed to generate quiz.');
+      setError('Failed to generate quiz. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleNumberOfQuestionsChange = (e) => {
+    const value = e.target.value;
+    setNumberOfQuestions(value);
+    
+    // Clear error when user starts correcting the value
+    if (error && error.includes('Number of questions')) {
+      setError('');
     }
   };
 
@@ -111,22 +144,27 @@ function GenerateQuiz() {
             </div>
 
             <div className="form-group">
-              <label>Number of questions</label>
+              <label>Number of questions (max: 20)</label>
               <input
                 type="number"
                 min={1}
-                max={100}
+                max={20}
                 value={numberOfQuestions}
-                onChange={(e) => setNumberOfQuestions(e.target.value)}
+                onChange={handleNumberOfQuestionsChange}
                 required
               />
+              {/* <div className="input-hint">Maximum 20 questions allowed</div> */}
             </div>
 
             <button type="submit" disabled={loading} className="generate-btn">
               {loading ? 'Generating...' : 'Generate'}
             </button>
 
-            {error && <div className="error-message" style={{ marginTop: 12 }}>{error}</div>}
+            {error && (
+              <div className="error-message" style={{ marginTop: 12 }}>
+                {error}
+              </div>
+            )}
           </form>
 
           {generatedQuestions && (
@@ -139,17 +177,6 @@ function GenerateQuiz() {
                   onClick={() => navigate('/quiz', { state: { ...generatedQuestions, quizId: generatedQuizId } })}
                 >
                   Start Quiz
-                </button>
-                <button
-                  className="generate-btn"
-                  onClick={() => {
-                    // allow regenerate
-                    setGeneratedQuestions(null);
-                    setGeneratedQuizId(null);
-                    setTotalQuestions(0);
-                  }}
-                >
-                  Regenerate
                 </button>
               </div>
             </div>

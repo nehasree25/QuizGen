@@ -143,6 +143,7 @@ body {
   max-width: 500px;
   text-align: center;
   border: 2px solid var(--p3);
+  margin: 0 auto;
 }
 
 .home-card h1 {
@@ -164,14 +165,22 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  text-align: left;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   font-weight: 600;
   color: #4A6572;
   font-size: 0.95rem;
+  text-align: left;
 }
 
 .form-group input,
@@ -184,6 +193,7 @@ body {
   transition: all 0.3s ease;
   background-color: #fff;
   color: #2C3E50;
+  box-sizing: border-box;
 }
 
 .form-group input:focus,
@@ -197,7 +207,7 @@ body {
 .generate-btn {
   padding: 1.1rem;
   background: linear-gradient(135deg, var(--accent-2), var(--primary-color));
-  color: #fff;
+  color: #000000;
   border: none;
   border-radius: 10px;
   font-size: 1.1rem;
@@ -248,51 +258,12 @@ body {
   background: var(--p1);
 }
 
-.home-container {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 90vh;
-  padding: 2rem;
-  background: linear-gradient(135deg, var(--p1), var(--p2));
-}
-
-.home-card {
-  background: #ffffff;
-  padding: 2rem;
-  border-radius: 15px;
-  box-shadow: 0 4px 12px rgba(94, 180, 232, 0.15);
-  width: 100%;
-  max-width: 500px;
-  border: 1px solid var(--p3);
-}
-
-.quiz-form .form-group {
-  margin-bottom: 1rem;
-}
-
-.quiz-form label {
-  display: block;
-  margin-bottom: 0.3rem;
-  font-weight: 600;
-  color: #4A6572;
-}
-
-.quiz-form input,
-.quiz-form select {
-  width: 100%;
-  padding: 0.6rem;
-  border-radius: 8px;
-  border: 1px solid var(--p3);
-  font-size: 1rem;
-  color: #2C3E50;
-}
 
 .generate-btn {
   width: 100%;
   background: linear-gradient(135deg, var(--accent-2), var(--primary-color));
   border: none;
-  color: #fff;
+  color: #000000;
   font-weight: 600;
   padding: 0.8rem;
   border-radius: 10px;
@@ -410,7 +381,7 @@ body {
 
 .next-btn {
   background: linear-gradient(135deg, var(--accent-2), var(--primary-color));
-  color: #fff;
+  color: #000000;
   border: none;
   padding: 1rem 2rem;
   border-radius: 12px;
@@ -1168,7 +1139,7 @@ body, .page-container {
 .nav-btn {
   background-color: #8BC8F0;
   border: none;
-  color: white;
+  color: #000000;
   font-weight: 600;
   padding: 10px 20px;
   border-radius: 10px;

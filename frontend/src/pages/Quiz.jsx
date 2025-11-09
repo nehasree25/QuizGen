@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { authFetch } from '../utils/auth';
-// import '.Quiz.css'; // optional if you have styles
+import Navbar from '../components/Navbar';
+
 
 function Quiz() {
   const location = useLocation();
@@ -21,21 +22,59 @@ function Quiz() {
   // Handle case when no questions are passed
   if (questions.length === 0) {
     return (
-      <div className="quiz-container">
-        <div className="error-card">
-          <h2>No Questions Available</h2>
-          <p>Please go back and generate a new quiz.</p>
-          <button onClick={() => navigate('/')} className="back-btn">
-            ← Back to Home
-          </button>
+      <div className="home">
+        <Navbar />
+        <div className="quiz-container">
+          <div className="error-card">
+            <h2>No Questions Available</h2>
+            <p>Please go back and generate a new quiz.</p>
+            <button onClick={() => navigate('/home')} className="back-btn">
+              ← Back to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Safety check for current question
+  if (currentQuestion < 0 || currentQuestion >= questions.length) {
+    return (
+      <div className="home">
+        <Navbar />
+        <div className="quiz-container">
+          <div className="error-card">
+            <h2>Invalid Question Index</h2>
+            <p>Please go back and start a new quiz.</p>
+            <button onClick={() => navigate('/home')} className="back-btn">
+              ← Back to Home
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   const currentQ = questions[currentQuestion];
+  if (!currentQ) {
+    return (
+      <div className="home">
+        <Navbar />
+        <div className="quiz-container">
+          <div className="error-card">
+            <h2>Question Not Found</h2>
+            <p>Please go back and start a new quiz.</p>
+            <button onClick={() => navigate('/home')} className="back-btn">
+              ← Back to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const isMultipleChoice =
-    currentQ.correct_answers && currentQ.correct_answers.length > 1; // ✅ auto-detect
+    currentQ.correct_answers && currentQ.correct_answers.length > 1;
 
   // Handle option selection
   const handleAnswerSelect = (answer) => {
@@ -118,8 +157,10 @@ function Quiz() {
   const isNextDisabled = () => selectedAnswers.length === 0;
 
   return (
-    <div className="quiz-container">
-      <div className="quiz-card">
+    <div className="home">
+      <Navbar />
+      <div className="quiz-container">
+        <div className="quiz-card">
         {/* Header with progress bar */}
         <div className="quiz-header">
           <div className="question-meta">
@@ -146,10 +187,11 @@ function Quiz() {
 
         {/* Question Section */}
         <div className="question-section">
-          <h3 className="question-text">{currentQ.question}</h3>
+          <h3 className="question-text">{currentQ.question || 'Question not available'}</h3>
 
           <div className="options-list">
-            {currentQ.options.map((option, index) => (
+            {currentQ.options && Array.isArray(currentQ.options) && currentQ.options.length > 0 ? (
+              currentQ.options.map((option, index) => (
               <div
                 key={index}
                 className={`option-item ${
@@ -174,7 +216,12 @@ function Quiz() {
                 </div>
                 <span className="option-text">{option}</span>
               </div>
-            ))}
+            ))
+            ) : (
+              <div className="error-message" style={{ padding: '1rem', color: '#e74c3c' }}>
+                No options available for this question.
+              </div>
+            )}
           </div>
 
           {isMultipleChoice && (
@@ -208,6 +255,7 @@ function Quiz() {
               ? 'Next →'
               : 'Finish Quiz'}
           </button>
+        </div>
         </div>
       </div>
     </div>

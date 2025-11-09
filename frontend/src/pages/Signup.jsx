@@ -47,17 +47,27 @@ const Signup = () => {
         }, 2000);
       } else {
         // Handle validation errors
-        if (data.username) {
-          setError(`Username: ${data.username[0]}`);
-        } else if (data.email) {
-          setError(`Email: ${data.email[0]}`);
-        } else if (data.password) {
-          setError(`Password: ${data.password[0]}`);
+        let errorMessage = 'Signup failed. Please check your input.';
+        if (data.username && Array.isArray(data.username)) {
+          errorMessage = `Username: ${data.username[0]}`;
+        } else if (data.email && Array.isArray(data.email)) {
+          errorMessage = `Email: ${data.email[0]}`;
+        } else if (data.password && Array.isArray(data.password)) {
+          errorMessage = `Password: ${data.password[0]}`;
+        } else if (data.password2 && Array.isArray(data.password2)) {
+          errorMessage = `Password confirmation: ${data.password2[0]}`;
         } else if (data.detail) {
-          setError(data.detail);
-        } else {
-          setError('Signup failed. Please check your input.');
+          errorMessage = data.detail;
+        } else if (typeof data === 'object') {
+          // Try to get first error message
+          const firstKey = Object.keys(data)[0];
+          if (firstKey && data[firstKey] && Array.isArray(data[firstKey])) {
+            errorMessage = `${firstKey}: ${data[firstKey][0]}`;
+          } else if (firstKey && typeof data[firstKey] === 'string') {
+            errorMessage = data[firstKey];
+          }
         }
+        setError(errorMessage);
       }
     } catch (err) {
       setError('Failed to connect to server. Please try again.');

@@ -1,19 +1,23 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 
 function Results() {
   const location = useLocation();
   const navigate = useNavigate();
   const { questions, userAnswers } = location.state || {};
 
-  if (!questions || !userAnswers) {
+  if (!questions || !userAnswers || !Array.isArray(questions) || questions.length === 0) {
     return (
-      <div className="results-container">
-        <div className="error-card">
-          <h2>No Results Available</h2>
-          <button onClick={() => navigate('/')} className="back-btn">
-            ← Back to Home
-          </button>
+      <div className="home">
+        <Navbar />
+        <div className="results-container">
+          <div className="error-card">
+            <h2>No Results Available</h2>
+            <button onClick={() => navigate('/home')} className="back-btn">
+              ← Back to Home
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -23,6 +27,10 @@ function Results() {
     return questions.reduce((total, question, index) => {
       const userAnswer = userAnswers[index] || [];
       const correctAnswers = question.correct_answers || [question.correct_answer];
+      
+      if (!correctAnswers || correctAnswers.length === 0) {
+        return total;
+      }
       
       if (question.question_type === 'single' || !question.question_type) {
         // Single choice or legacy format
@@ -43,10 +51,14 @@ function Results() {
   };
 
   const score = calculateScore();
-  const percentage = Math.round((score / questions.length) * 100);
+  const percentage = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
 
   const isAnswerCorrect = (question, userAnswer) => {
     const correctAnswers = question.correct_answers || [question.correct_answer];
+    
+    if (!correctAnswers || correctAnswers.length === 0) {
+      return false;
+    }
     
     if (question.question_type === 'single' || !question.question_type) {
       return userAnswer[0] === correctAnswers[0];
@@ -76,8 +88,10 @@ function Results() {
   };
 
   return (
-    <div className="results-container">
-      <div className="results-card">
+    <div className="home">
+      <Navbar />
+      <div className="results-container">
+        <div className="results-card">
         <center><h1>Quiz Results</h1></center>
 
         <div className={`score-circle ${percentage >= 80 ? 'excellent' : percentage >= 60 ? 'good' : 'poor'}`}>
@@ -129,16 +143,17 @@ function Results() {
                 )}
 
                 <div className="explanation">
-                  <strong>Explanation:</strong> {question.explanation}
+                  <strong>Explanation:</strong> {question.explanation || 'No explanation available.'}
                 </div>
               </div>
             );
           })}
         </div>
 
-        <button onClick={() => navigate('/')} className="new-quiz-btn">
+        <button onClick={() => navigate('/home')} className="new-quiz-btn">
           Go to Dashboard
         </button>
+        </div>
       </div>
     </div>
   );

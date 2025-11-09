@@ -27,15 +27,9 @@ from drf_yasg import openapi
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
 def signup_view(request):
-    # your existing signup logic
-    ...
-
-# Signup endpoint
-@api_view(["POST"])
-@permission_classes([permissions.AllowAny])
-def signup_view(request):
     serializer = SignupSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     user = serializer.save()
     return Response({"detail": "User created successfully."}, status=status.HTTP_201_CREATED)
 
@@ -83,7 +77,8 @@ class ChangePasswordView(APIView):
 
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         user = request.user
         if not user.check_password(serializer.validated_data["old_password"]):
             return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
