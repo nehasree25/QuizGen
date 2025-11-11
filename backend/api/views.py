@@ -19,7 +19,7 @@ def generate_quiz(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     data = serializer.validated_data
 
-    # Check if an incomplete quiz exists
+    # Check for incomplete quiz
     existing_quiz = QuizHistory.objects.filter(
         user=request.user,
         domain=data['domain'],
@@ -36,7 +36,7 @@ def generate_quiz(request):
             "current_question_index": existing_quiz.current_question_index or 0,
         }, status=status.HTTP_200_OK)
 
-    # Otherwise, generate a new quiz using AI
+    # Generate new quiz
     ai_service = AIService()
     result = ai_service.generate_quiz_questions(
         domain=data['domain'],
@@ -48,11 +48,24 @@ def generate_quiz(request):
     if isinstance(result, dict) and 'error' in result:
         return Response(result, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    # Ensure the number of questions matches requested
+    questions = result if isinstance(result, list) else []
+    num_required = data['number_of_questions']
+
+    while len(questions) < num_required:
+        questions.append({
+            "question": f"Placeholder question {len(questions)+1}",
+            "question_type": "single",
+            "correct_answer": "N/A",
+            "correct_answers": ["N/A"],
+            "explanation": "Auto-generated placeholder."
+        })
+
     quiz = QuizHistory.objects.create(
         user=request.user,
         domain=data['domain'],
         sub_domain=data['sub_domain'],
-        questions=result,
+        questions=questions,
         user_answers=[],
         current_question_index=0,
         status='incomplete'
@@ -61,10 +74,11 @@ def generate_quiz(request):
     return Response({
         "message": "New quiz generated.",
         "quiz_id": quiz.id,
-        "questions": result,
+        "questions": questions,
         "user_answers": [],
         "current_question_index": 0,
     }, status=status.HTTP_200_OK)
+
 
 
 # ---------- Save Quiz Progress ----------

@@ -4,7 +4,6 @@ import { removeTokens, getRefreshToken, authFetch, removeUser } from "../utils/a
 
 function Navbar() {
   const navigate = useNavigate();
-  // navigation-only: generation handled on its dedicated page
 
   const handleLogout = async () => {
     try {
@@ -17,22 +16,21 @@ function Navbar() {
             body: JSON.stringify({ refresh: refreshToken }),
           });
         } catch (error) {
-          // Continue with logout even if API call fails
           console.error('Logout API call failed:', error);
         }
       }
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {
-      // Always clear local storage and navigate
+      // Always clear tokens and user data
       removeTokens();
       removeUser();
-      navigate('/login');
+      // Redirect to login, replace history so back button won't return home
+      navigate('/login', { replace: true });
     }
   };
 
   const handleGenerate = () => {
-    // Navigate to the generate-quiz page where the user can pick domain/subdomain/level
     navigate('/generate-quiz');
   };
 
@@ -43,7 +41,6 @@ function Navbar() {
         <li><Link to="/">Dashboard</Link></li>
         <li><Link to="/history">History</Link></li>
         <li><Link to="/profile">Profile</Link></li>
-        
         <li>
           <button
             onClick={handleGenerate}
