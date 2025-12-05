@@ -10,8 +10,6 @@ from api.swagger import schema_view
 
 urlpatterns = [
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-
-    # --- Quiz APIs ---
     path('generate-quiz/', generate_quiz, name='generate-quiz'),
     path('quiz-history/', get_quiz_history, name='quiz-history'),
     path('resume-quiz/', resume_quiz, name='resume-quiz'),
