@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import QuizHistory
-
+#serializers
 class QuizGenerationSerializer(serializers.Serializer):
     domain = serializers.CharField(max_length=100)
     sub_domain = serializers.CharField(max_length=100)
@@ -8,7 +8,6 @@ class QuizGenerationSerializer(serializers.Serializer):
     level = serializers.ChoiceField(
         choices=[('easy', 'Easy'), ('medium', 'Medium'), ('hard', 'Hard')]
     )
-
 class GeneratedQuestionSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     question = serializers.CharField()
