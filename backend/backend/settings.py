@@ -19,7 +19,7 @@ env = environ.Env()
 environ.Env.read_env(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 # Access variables
-API_KEY = env('API_KEY')
+GROQ_API_KEY = env('GROQ_API_KEY')
 DEBUG = env.bool('DEBUG', default=False)
 SECRET_KEY = env('SECRET_KEY')
 

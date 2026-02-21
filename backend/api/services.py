@@ -1,79 +1,114 @@
-import os
+
+
 from typing import List
-from dotenv import load_dotenv
-from pydantic import BaseModel, Field
-from langchain_google_genai import ChatGoogleGenerativeAI
+from pydantic import BaseModel
+from django.conf import settings
+from openai import OpenAI
+import json
+import re
 
 
-load_dotenv()
+# =========================
+# ✅ Pydantic Models
+# =========================
+
 class QuizQuestion(BaseModel):
-    """Model for a single quiz question (supports multiple correct answers)"""
-    id: int = Field(description="Unique identifier for the question")
-    question: str = Field(description="The quiz question text")
-    options: List[str] = Field(description="List of exactly 4 answer options")
-    correct_answers: List[str] = Field(description="List of correct options (1 or more)")
-    explanation: str = Field(description="Explanation for the correct answer(s)")
-    sub_topic: str = Field(description="Sub-topic or concept the question belongs to")
+    id: int
+    question: str
+    options: List[str]
+    correct_answers: List[str]
+    explanation: str
+    sub_topic: str
+
+
 class QuizQuestionSet(BaseModel):
-    """Model for a collection of quiz questions"""
-    questions: List[QuizQuestion] = Field(description="List of generated quiz questions")
+    questions: List[QuizQuestion]
+
+
+# =========================
+# ✅ AI Service (Groq)
+# =========================
+
 class AIService:
-    """
-    AI Service using Gemini 2.0 Flash model with LangChain structured output.
-    """
-
     def __init__(self):
-        self.api_key = os.getenv("API_KEY")
+        self.api_key = settings.GROQ_API_KEY
+
         if not self.api_key:
-            raise ValueError("API_KEY not found in environment variables")
+            raise ValueError("GROQ_API_KEY missing")
 
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
-            google_api_key=self.api_key,
-            temperature=0.7,
-            top_p=0.95,
-            max_output_tokens=8192
+        self.client = OpenAI(
+            api_key=self.api_key,
+            base_url="https://api.groq.com/openai/v1"
         )
-        self.structured_llm = self.llm.with_structured_output(QuizQuestionSet)
 
-    def generate_quiz_questions(self, domain: str, sub_domain: str, number_of_questions: int, level: str) -> List[dict]:
-        """
-        Generate quiz questions using Gemini LLM with structured output.
+    def generate_quiz_questions(self, domain, sub_domain, number_of_questions, level):
 
-        Args:
-            domain (str): Main domain (e.g., "Python", "AI", "Networking")
-            sub_domain (str): Specific sub-topic (e.g., "Lists", "OOP", "CNNs")
-            number_of_questions (int): Number of questions to generate
-            level (str): Difficulty level ("easy", "medium", "hard")
-
-        Returns:
-            List[dict]: List of structured quiz questions
-        """
+        number_of_questions = min(number_of_questions, 5)
 
         prompt = f"""
-        You are an expert educational content creator.
+Generate {number_of_questions} {level} MCQs on "{sub_domain}" from "{domain}".
 
-        TASK:
-        Generate {number_of_questions} {level}-level multiple choice questions on the topic "{sub_domain}" 
-        from the domain "{domain}".
+STRICT:
+- Return ONLY valid JSON
+- No markdown
+- No extra text
 
-        REQUIREMENTS:
-        - Each question must have exactly 4 options.
-        - Some questions should have multiple correct answers (2 or more).
-        - Some may have only one correct answer.
-        - Include a clear explanation for the correct answers.
-        - Include a sub_topic field that identifies the specific concept or theme of the question.
-        - Vary between conceptual and applied questions.
-        - Ensure the questions strictly match the difficulty level: {level}.
-        - Return data strictly matching the defined JSON schema.
-        """
+FORMAT:
+{{
+  "questions": [
+    {{
+      "id": 1,
+      "question": "text",
+      "options": ["A","B","C","D"],
+      "correct_answers": ["A"],
+      "explanation": "text",
+      "sub_topic": "text"
+    }}
+  ]
+}}
+"""
 
         try:
-            result: QuizQuestionSet = self.structured_llm.invoke(prompt)
-            return [q.model_dump() for q in result.questions]
+            response = self.client.chat.completions.create(
+                model="llama-3.3-70b-versatile",  # 🔥 Best Groq model
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3
+            )
+
+            content = response.choices[0].message.content
+
+            print("✅ RAW RESPONSE:\n", content)  # 🔥 DEBUG
+
+            # =========================
+            # 🔥 CLEAN JSON
+            # =========================
+
+            content = content.strip()
+            content = content.replace("```json", "").replace("```", "")
+
+            start = content.find("{")
+            end = content.rfind("}") + 1
+            json_str = content[start:end]
+
+            # remove trailing commas
+            json_str = re.sub(r",\s*}", "}", json_str)
+            json_str = re.sub(r",\s*]", "]", json_str)
+
+            parsed = json.loads(json_str)
+
+            validated = QuizQuestionSet(**parsed)
+
+            result = [q.model_dump() for q in validated.questions]
+
+            print("🎯 PARSED QUESTIONS:\n", result)  # 🔥 CONFIRM OUTPUT
+
+            return result
 
         except Exception as e:
+            print("❌ ERROR:", str(e))
             return {
-                "error": f"Error generating quiz: {str(e)}",
+                "error": str(e),
                 "questions": []
             }
