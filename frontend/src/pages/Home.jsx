@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
+import StreakCalendar from "../components/StreakCalendar";
 import {
   LineChart,
   Line,
@@ -14,7 +15,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import "../App.css";
-
+import Streak from "../components/Streak";
 function Home() {
   const [stats, setStats] = useState({
     total: 0,
@@ -102,7 +103,8 @@ function Home() {
       <Navbar />
       <div className="dashboard-container">
         <h1 className="dashboard-title">Dashboard</h1>
-
+        {/* <Streak />
+        <StreakCalendar /> */}
         {loading ? (
           <p>Loading statistics...</p>
         ) : (

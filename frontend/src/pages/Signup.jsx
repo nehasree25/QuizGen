@@ -3,6 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../config';
 
 const Signup = () => {
+  const [step, setStep] = useState(1); // 1 = form, 2 = OTP
+  const [otp, setOtp] = useState('');
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -11,8 +14,10 @@ const Signup = () => {
     first_name: '',
     last_name: ''
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -22,7 +27,7 @@ const Signup = () => {
     });
   };
 
-  // ✅ Validate password strength
+  // ✅ Password validation
   const validatePassword = (password) => {
     const minLength = /.{6,}/;
     const upperCase = /[A-Z]/;
@@ -30,36 +35,27 @@ const Signup = () => {
     const number = /[0-9]/;
     const specialChar = /[!@#$%^&*(),.?":{}|<>]/;
 
-    if (!minLength.test(password)) {
-      return "Password must be at least 6 characters long.";
-    }
-    if (!upperCase.test(password)) {
-      return "Password must contain at least one uppercase letter (A-Z).";
-    }
-    if (!lowerCase.test(password)) {
-      return "Password must contain at least one lowercase letter (a-z).";
-    }
-    if (!number.test(password)) {
-      return "Password must contain at least one number (0-9).";
-    }
-    if (!specialChar.test(password)) {
-      return "Password must contain at least one special symbol (!@#$%^&*).";
-    }
+    if (!minLength.test(password)) return "Password must be at least 6 characters.";
+    if (!upperCase.test(password)) return "Must include uppercase letter.";
+    if (!lowerCase.test(password)) return "Must include lowercase letter.";
+    if (!number.test(password)) return "Must include a number.";
+    if (!specialChar.test(password)) return "Must include a special character.";
+
     return null;
   };
 
-  const handleSubmit = async (e) => {
+  // ✅ STEP 1: Send OTP
+  const handleSendOTP = async (e) => {
     e.preventDefault();
-    setError(''); // Clear old errors
+    setError('');
 
-    // ✅ Password validation first (before loading state)
+    // Validate password
     const passwordError = validatePassword(formData.password);
     if (passwordError) {
       setError(passwordError);
       return;
     }
 
-    // ✅ Password match check
     if (formData.password !== formData.password2) {
       setError("Passwords do not match.");
       return;
@@ -68,45 +64,60 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL.replace(/\/$/, '')}/auth/signup/`, {
-        method: 'POST',
+      const response = await fetch(`${API_BASE_URL}/auth/send-otp/`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ email: formData.email })
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setError('Signup successful! Please login.');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
+        setStep(2);
+        setError("✅ OTP sent to your email");
       } else {
-        let errorMessage = 'Signup failed. Please check your input.';
-        if (data.username && Array.isArray(data.username)) {
-          errorMessage = `Username: ${data.username[0]}`;
-        } else if (data.email && Array.isArray(data.email)) {
-          errorMessage = `Email: ${data.email[0]}`;
-        } else if (data.password && Array.isArray(data.password)) {
-          errorMessage = `Password: ${data.password[0]}`;
-        } else if (data.password2 && Array.isArray(data.password2)) {
-          errorMessage = `Password confirmation: ${data.password2[0]}`;
-        } else if (data.detail) {
-          errorMessage = data.detail;
-        } else if (typeof data === 'object') {
-          const firstKey = Object.keys(data)[0];
-          if (firstKey && data[firstKey] && Array.isArray(data[firstKey])) {
-            errorMessage = `${firstKey}: ${data[firstKey][0]}`;
-          } else if (firstKey && typeof data[firstKey] === 'string') {
-            errorMessage = data[firstKey];
-          }
-        }
-        setError(errorMessage);
+        setError(data.email?.[0] || "Failed to send OTP");
       }
-    } catch (err) {
-      setError('Failed to connect to server. Please try again.');
+    } catch {
+      setError("Server error. Try again.");
+    }
+
+    setLoading(false);
+  };
+
+  // ✅ STEP 2: Verify OTP & Signup
+  const handleVerifySignup = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/signup/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...formData,
+          otp: otp
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setError("🎉 Signup successful! Redirecting...");
+        setTimeout(() => navigate('/login'), 2000);
+      } else {
+        if (data.otp) {
+          setError(`OTP Error: ${data.otp[0]}`);
+        } else {
+          setError("Signup failed. Check OTP or inputs.");
+        }
+      }
+    } catch {
+      setError("Server error. Try again.");
     }
 
     setLoading(false);
@@ -116,109 +127,90 @@ const Signup = () => {
     <div className="home-container">
       <div className="home-card">
         <h1>Create Account</h1>
-        <p className="subtitle">Sign up to get started</p>
+        <p className="subtitle">
+          {step === 1 ? "Fill details to get OTP" : "Enter OTP to verify"}
+        </p>
 
-        <form onSubmit={handleSubmit} className="quiz-form">
-          <div className="form-group">
-            <label>Username:</label>
-            <input 
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              required 
-              placeholder="Enter your username"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Email:</label>
-            <input 
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required 
-              placeholder="Enter your email"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>First Name:</label>
-            <input 
-              type="text"
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
-              placeholder="Enter your first name (optional)"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Last Name:</label>
-            <input 
-              type="text"
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
-              placeholder="Enter your last name (optional)"
-            />
-          </div>
-          
-          <div className="form-group">
-            <label>Password:</label>
-            <input 
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required 
-              placeholder="Create a password"
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Confirm Password:</label>
-            <input 
-              type="password"
-              name="password2"
-              value={formData.password2}
-              onChange={handleChange}
-              required 
-              placeholder="Confirm your password"
-            />
-          </div>
-          
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="generate-btn"
-          >
-            {loading ? 'Creating Account...' : 'Create Account'}
-          </button>
-          
-          {error && (
-            <div className="error-message">
-              <center><div>{error}</div></center>
+        {/* ================= STEP 1 FORM ================= */}
+        {step === 1 && (
+          <form onSubmit={handleSendOTP} className="quiz-form">
+            <div className="form-group">
+              <label>Username</label>
+              <input name="username" onChange={handleChange} required />
             </div>
-          )}
 
-          <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-            <span style={{ color: '#666' }}>
-              Already have an account?{' '}
-              <Link 
-                to="/login" 
-                style={{ 
-                  color: '#256178', 
-                  textDecoration: 'none',
-                  fontWeight: '600'
-                }}
-              >
-                Sign in
-              </Link>
-            </span>
+            <div className="form-group">
+              <label>Email</label>
+              <input type="email" name="email" onChange={handleChange} required />
+            </div>
+
+            <div className="form-group">
+              <label>First Name</label>
+              <input name="first_name" onChange={handleChange} />
+            </div>
+
+            <div className="form-group">
+              <label>Last Name</label>
+              <input name="last_name" onChange={handleChange} />
+            </div>
+
+            <div className="form-group">
+              <label>Password</label>
+              <input type="password" name="password" onChange={handleChange} required />
+            </div>
+
+            <div className="form-group">
+              <label>Confirm Password</label>
+              <input type="password" name="password2" onChange={handleChange} required />
+            </div>
+
+            <button disabled={loading} className="generate-btn">
+              {loading ? "Sending OTP..." : "Send OTP"}
+            </button>
+          </form>
+        )}
+
+        {/* ================= STEP 2 OTP ================= */}
+        {step === 2 && (
+          <div className="quiz-form">
+            <div className="form-group">
+              <label>Enter OTP</label>
+              <input
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="6-digit OTP"
+              />
+            </div>
+
+            <button
+              onClick={handleVerifySignup}
+              disabled={loading}
+              className="generate-btn"
+            >
+              {loading ? "Verifying..." : "Verify & Signup"}
+            </button>
+
+            <button
+              onClick={handleSendOTP}
+              type="button"
+              className="generate-btn"
+              style={{ marginTop: '10px', background: '#ccc' }}
+            >
+              Resend OTP
+            </button>
           </div>
-        </form>
+        )}
+
+        {/* ================= ERROR ================= */}
+        {error && (
+          <div className="error-message" style={{ marginTop: '1rem' }}>
+            <center>{error}</center>
+          </div>
+        )}
+
+        <div style={{ marginTop: '1rem' }}>
+          Already have an account? <Link to="/login">Login</Link>
+        </div>
       </div>
     </div>
   );

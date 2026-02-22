@@ -18,6 +18,7 @@ class QuizHistory(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='incomplete')
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
+    time_left = models.IntegerField(default=30)  # per question
 
     def __str__(self):
         return f"{self.user.username} - {self.domain}/{self.sub_domain} ({self.status})"

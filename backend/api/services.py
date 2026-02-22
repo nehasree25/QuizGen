@@ -1,5 +1,3 @@
-
-
 from typing import List
 from pydantic import BaseModel
 from django.conf import settings
@@ -43,15 +41,18 @@ class AIService:
 
     def generate_quiz_questions(self, domain, sub_domain, number_of_questions, level):
 
-        number_of_questions = min(number_of_questions, 5)
+        # number_of_questions = min(number_of_questions, 5)
 
         prompt = f"""
 Generate {number_of_questions} {level} MCQs on "{sub_domain}" from "{domain}".
 
-STRICT:
+STRICT RULES:
 - Return ONLY valid JSON
 - No markdown
 - No extra text
+- "options" MUST be a LIST of 4 strings
+- DO NOT use "choices"
+- DO NOT return dictionary for options
 
 FORMAT:
 {{
@@ -59,8 +60,8 @@ FORMAT:
     {{
       "id": 1,
       "question": "text",
-      "options": ["A","B","C","D"],
-      "correct_answers": ["A"],
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_answers": ["Option A"],
       "explanation": "text",
       "sub_topic": "text"
     }}
@@ -70,16 +71,13 @@ FORMAT:
 
         try:
             response = self.client.chat.completions.create(
-                model="llama-3.3-70b-versatile",  # 🔥 Best Groq model
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
                 temperature=0.3
             )
 
             content = response.choices[0].message.content
-
-            print("✅ RAW RESPONSE:\n", content)  # 🔥 DEBUG
+            print("✅ RAW RESPONSE:\n", content)
 
             # =========================
             # 🔥 CLEAN JSON
@@ -98,16 +96,44 @@ FORMAT:
 
             parsed = json.loads(json_str)
 
+            # =========================
+            # 🔥 NORMALIZE DATA
+            # =========================
+
+            for q in parsed.get("questions", []):
+
+                # Fix "choices" → "options"
+                if "choices" in q:
+                    q["options"] = q.pop("choices")
+
+                # Convert dict options → list
+                if isinstance(q.get("options"), dict):
+                    q["options"] = list(q["options"].values())
+
+                # Ensure options exists
+                if "options" not in q or not isinstance(q["options"], list):
+                    q["options"] = []
+
+                # Ensure correct_answers is list
+                if isinstance(q.get("correct_answers"), str):
+                    q["correct_answers"] = [q["correct_answers"]]
+
+            # =========================
+            # ✅ VALIDATE
+            # =========================
+
             validated = QuizQuestionSet(**parsed)
 
             result = [q.model_dump() for q in validated.questions]
 
-            print("🎯 PARSED QUESTIONS:\n", result)  # 🔥 CONFIRM OUTPUT
+            print("🎯 FINAL PARSED QUESTIONS:\n", result)
 
             return result
 
         except Exception as e:
             print("❌ ERROR:", str(e))
+            print("❌ FAILED JSON:\n", json_str if 'json_str' in locals() else "No JSON")
+
             return {
                 "error": str(e),
                 "questions": []
