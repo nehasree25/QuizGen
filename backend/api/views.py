@@ -1,4 +1,11 @@
-from drf_yasg.utils import swagger_auto_schema
+try:
+    from drf_yasg.utils import swagger_auto_schema
+except Exception:
+    # drf_yasg is optional for local/dev environments
+    def swagger_auto_schema(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response

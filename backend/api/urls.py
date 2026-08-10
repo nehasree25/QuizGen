@@ -9,7 +9,6 @@ from .views import (
 from api.swagger import schema_view
 
 urlpatterns = [
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('generate-quiz/', generate_quiz, name='generate-quiz'),
     path('quiz-history/', get_quiz_history, name='quiz-history'),
     path('resume-quiz/', resume_quiz, name='resume-quiz'),
@@ -17,3 +16,6 @@ urlpatterns = [
     path('save-quiz-progress/<int:quiz_id>/', save_quiz_progress, name='save-quiz-progress'),
     path('mark-complete/<int:quiz_id>/', mark_quiz_complete, name='mark-complete'),
 ]
+
+if schema_view is not None:
+    urlpatterns.insert(0, path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'))
