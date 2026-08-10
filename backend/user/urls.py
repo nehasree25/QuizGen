@@ -10,7 +10,6 @@ from .views import (
     verify_otp 
 )
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import StreakView
 urlpatterns = [
     path("auth/signup/", signup_view, name="signup"),
     path("auth/login/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),
@@ -20,6 +19,5 @@ urlpatterns = [
     path("auth/profile/edit/", ProfileEditView.as_view(), name="profile-edit"),
     path("auth/send-otp/", send_otp),
     path("auth/verify-otp/", verify_otp),
-    path("streak/", StreakView.as_view()),
     path("auth/change-password/", ChangePasswordView.as_view(), name="change-password"),
 ]

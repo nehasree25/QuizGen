@@ -19,45 +19,6 @@
   --bg-gradient-end: var(--p2);
   --muted-color: #5C7A8A;
 }
-/* 🔥 STREAK CARD */
-.streak-card {
-  background: rgba(255, 255, 255, 0.85);
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 10px rgba(94, 180, 232, 0.15);
-  border: 1px solid var(--p3);
-}
-
-.streak-card h3 {
-  color: var(--primary-color);
-  margin-bottom: 10px;
-}
-
-/* 🔥 DAYS */
-.streak-days {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.streak-day {
-  text-align: center;
-}
-
-.streak-day .emoji {
-  font-size: 22px;
-  padding: 8px;
-  border-radius: 8px;
-  background: var(--p1);
-}
-.streak-day .emoji {
-  transition: transform 0.2s ease;
-}
-
-.streak-day .emoji:hover {
-  transform: scale(1.2);
-}
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

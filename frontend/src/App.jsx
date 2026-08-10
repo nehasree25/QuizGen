@@ -10,7 +10,6 @@ import Profile from './pages/Profile';
 import History from './pages/History';
 import GenerateQuiz from './pages/GenerateQuiz';
 import './App.css';
-import StreakCalendar from './components/StreakCalendar';
 
 function App() {
   return (
@@ -45,14 +44,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/streak" 
-            element={
-              <ProtectedRoute>
-                <StreakCalendar />
               </ProtectedRoute>
             } 
           />

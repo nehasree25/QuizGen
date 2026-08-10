@@ -18,22 +18,6 @@ from .serializers import (
     ChangePasswordSerializer,
 )
 
-from datetime import date, timedelta
-from .models import UserActivity
-
-
-# =========================
-# 🔥 STREAK HELPER FUNCTION
-# =========================
-from user.models import UserActivity
-from datetime import date
-
-def mark_user_active(user):
-    UserActivity.objects.get_or_create(
-        user=user,
-        date=date.today()
-    )
-
 
 # =========================
 # 🔐 OTP APIs
@@ -73,9 +57,6 @@ def signup_view(request):
 
     user = serializer.save()
 
-    # 🔥 mark active on signup
-    mark_user_active(user)
-
     return Response({"detail": "User created successfully."}, status=status.HTTP_201_CREATED)
 
 
@@ -86,22 +67,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-
-        username = request.data.get("username")
-
-        user = (
-            User.objects.filter(username__iexact=username).first()
-            or User.objects.filter(email__iexact=username).first()
-        )
-
-        if user:
-            mark_user_active(user)
-
-        return response
+        return super().post(request, *args, **kwargs)
 
 
 # =========================
@@ -141,47 +107,7 @@ class ProfileEditView(RetrieveUpdateAPIView):
 
 
 # =========================
-# 🔥 STREAK API
-# =========================
-class StreakView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
-        today = date.today()
-
-        activities = UserActivity.objects.filter(user=user).order_by('-date')
-
-        # 🔥 calculate streak
-        streak = 0
-        current_day = today
-
-        for activity in activities:
-            if activity.date == current_day:
-                streak += 1
-                current_day -= timedelta(days=1)
-            else:
-                break
-
-        # 🔥 last 7 days calendar
-        last_7_days = []
-        for i in range(6, -1, -1):
-            day = today - timedelta(days=i)
-            active = UserActivity.objects.filter(user=user, date=day).exists()
-
-            last_7_days.append({
-                "date": str(day),
-                "active": active
-            })
-
-        return Response({
-            "streak": streak,
-            "week": last_7_days
-        })
-
-
-# =========================
-# 🔐 CHANGE PASSWORD
+#  CHANGE PASSWORD
 # =========================
 class ChangePasswordView(APIView):
     permission_classes = [permissions.IsAuthenticated]
