@@ -1,29 +1,17 @@
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import get_default_password_validators
 from django.core.exceptions import ValidationError
-from django.core.mail import send_mail
-from django.conf import settings
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import EmailOTP
-import random
-
-
-from django.contrib.auth.models import User
-from django.contrib.auth.password_validation import get_default_password_validators
-from django.core.exceptions import ValidationError
-from rest_framework import serializers
-from .models import EmailOTP
 
 
 class SignupSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     password2 = serializers.CharField(write_only=True)
-    otp = serializers.CharField(write_only=True)   # ✅ ADD THIS
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "password2", "first_name", "last_name", "otp")
+        fields = ("username", "email", "password", "password2", "first_name", "last_name")
 
     def validate(self, data):
         if data["password"] != data["password2"]:
@@ -44,19 +32,6 @@ class SignupSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        request = self.context.get("request")  # ✅ FIX
-        email = validated_data.get("email")
-        otp_input = validated_data.pop("otp")
-
-        # 🔐 Verify OTP
-        try:
-            otp_obj = EmailOTP.objects.filter(email=email).latest("created_at")
-        except EmailOTP.DoesNotExist:
-            raise serializers.ValidationError({"otp": "OTP not found"})
-
-        if otp_obj.otp != otp_input:
-            raise serializers.ValidationError({"otp": "Invalid OTP"})
-
         validated_data.pop("password2")
         password = validated_data.pop("password")
 
@@ -67,43 +42,6 @@ class SignupSerializer(serializers.ModelSerializer):
         return user
 
 
-class SendOTPSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-
-    def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
-            raise serializers.ValidationError("Email already exists.")
-        return value
-
-    def create(self, validated_data):
-        email = validated_data["email"]
-
-        otp = str(random.randint(100000, 999999))
-
-        EmailOTP.objects.create(email=email, otp=otp)
-
-        send_mail(
-            subject="Your OTP Code",
-            message=f"Your OTP is {otp}",
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[email],
-        )
-
-        return {"message": "OTP sent successfully"}
-class VerifyOTPSerializer(serializers.Serializer):
-    email = serializers.EmailField()
-    otp = serializers.CharField()
-
-    def validate(self, data):
-        try:
-            otp_obj = EmailOTP.objects.filter(email=data["email"]).latest("created_at")
-        except EmailOTP.DoesNotExist:
-            raise serializers.ValidationError("OTP not found")
-
-        if otp_obj.otp != data["otp"]:
-            raise serializers.ValidationError("Invalid OTP")
-
-        return data
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """Allows login using username OR email"""
 

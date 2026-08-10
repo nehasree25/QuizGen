@@ -6,8 +6,7 @@ from .views import (
     ProfileView,
     ProfileEditView,
     ChangePasswordView,
-    send_otp,          # ✅ ADD THIS
-    verify_otp 
+    # OTP views removed
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 urlpatterns = [
@@ -17,7 +16,6 @@ urlpatterns = [
     path("auth/logout/", logout_view, name="logout"),
     path("auth/profile/", ProfileView.as_view(), name="profile"),
     path("auth/profile/edit/", ProfileEditView.as_view(), name="profile-edit"),
-    path("auth/send-otp/", send_otp),
-    path("auth/verify-otp/", verify_otp),
+    # OTP routes removed
     path("auth/change-password/", ChangePasswordView.as_view(), name="change-password"),
 ]

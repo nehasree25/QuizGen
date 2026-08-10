@@ -3,8 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import API_BASE_URL from '../config';
 
 const Signup = () => {
-  const [step, setStep] = useState(1); // 1 = form, 2 = OTP
-  const [otp, setOtp] = useState('');
+  // OTP flow removed — signup posts directly to backend
 
   const [formData, setFormData] = useState({
     username: '',
@@ -44,8 +43,8 @@ const Signup = () => {
     return null;
   };
 
-  // ✅ STEP 1: Send OTP
-  const handleSendOTP = async (e) => {
+  // Signup directly (no OTP)
+  const handleSignup = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -64,44 +63,12 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/send-otp/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email: formData.email })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setStep(2);
-        setError("✅ OTP sent to your email");
-      } else {
-        setError(data.email?.[0] || "Failed to send OTP");
-      }
-    } catch {
-      setError("Server error. Try again.");
-    }
-
-    setLoading(false);
-  };
-
-  // ✅ STEP 2: Verify OTP & Signup
-  const handleVerifySignup = async () => {
-    setLoading(true);
-    setError('');
-
-    try {
       const response = await fetch(`${API_BASE_URL}/auth/signup/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          ...formData,
-          otp: otp
-        })
+        body: JSON.stringify({ ...formData })
       });
 
       const data = await response.json();
@@ -110,11 +77,10 @@ const Signup = () => {
         setError("🎉 Signup successful! Redirecting...");
         setTimeout(() => navigate('/login'), 2000);
       } else {
-        if (data.otp) {
-          setError(`OTP Error: ${data.otp[0]}`);
-        } else {
-          setError("Signup failed. Check OTP or inputs.");
-        }
+        // show first error message returned by backend
+        const firstKey = Object.keys(data)[0];
+        const firstMsg = Array.isArray(data[firstKey]) ? data[firstKey][0] : data[firstKey];
+        setError(firstMsg || "Signup failed. Check inputs.");
       }
     } catch {
       setError("Server error. Try again.");
@@ -127,13 +93,10 @@ const Signup = () => {
     <div className="home-container">
       <div className="home-card">
         <h1>Create Account</h1>
-        <p className="subtitle">
-          {step === 1 ? "Fill details to get OTP" : "Enter OTP to verify"}
-        </p>
+        <p className="subtitle">Fill details to create account</p>
 
         {/* ================= STEP 1 FORM ================= */}
-        {step === 1 && (
-          <form onSubmit={handleSendOTP} className="quiz-form">
+          <form onSubmit={handleSignup} className="quiz-form">
             <div className="form-group">
               <label>Username</label>
               <input name="username" onChange={handleChange} required />
@@ -165,41 +128,10 @@ const Signup = () => {
             </div>
 
             <button disabled={loading} className="generate-btn">
-              {loading ? "Sending OTP..." : "Send OTP"}
+              {loading ? "Signing up..." : "Sign up"}
             </button>
           </form>
-        )}
-
-        {/* ================= STEP 2 OTP ================= */}
-        {step === 2 && (
-          <div className="quiz-form">
-            <div className="form-group">
-              <label>Enter OTP</label>
-              <input
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="6-digit OTP"
-              />
-            </div>
-
-            <button
-              onClick={handleVerifySignup}
-              disabled={loading}
-              className="generate-btn"
-            >
-              {loading ? "Verifying..." : "Verify & Signup"}
-            </button>
-
-            <button
-              onClick={handleSendOTP}
-              type="button"
-              className="generate-btn"
-              style={{ marginTop: '10px', background: '#ccc' }}
-            >
-              Resend OTP
-            </button>
-          </div>
-        )}
+        
 
         {/* ================= ERROR ================= */}
         {error && (
