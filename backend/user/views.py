@@ -46,54 +46,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
-        # Debug logging to help diagnose 400 Bad Request from frontend
-        try:
-            print('--- Login request headers ---')
-            for k, v in request.headers.items():
-                print(f'{k}: {v}')
-            print('--- Login request body (raw) ---')
-            try:
-                print(request.body.decode('utf-8'))
-            except Exception:
-                print(request.body)
-            print('--- Login request.data parsed ---')
-            print(request.data)
-        except Exception as e:
-            print('Error logging login request:', e)
-
-        # Run serializer manually to capture validation errors
-        serializer = self.get_serializer(data=request.data)
-
-        # Extra debug: check user existence and password check
-        try:
-            from django.contrib.auth import get_user_model
-            UserModel = get_user_model()
-            username_or_email = request.data.get('username')
-            user_obj = (
-                UserModel.objects.filter(username__iexact=username_or_email).first()
-                or UserModel.objects.filter(email__iexact=username_or_email).first()
-            )
-            print('--- User lookup ---')
-            if user_obj:
-                print('Found user:', user_obj.username, 'email:', user_obj.email)
-                try:
-                    print('is_active:', user_obj.is_active)
-                    print('password hash (starts):', str(user_obj.password)[:10])
-                    pw = request.data.get('password')
-                    print('check_password result:', user_obj.check_password(pw))
-                except Exception as e:
-                    print('Error checking password:', e)
-            else:
-                print('User not found for:', username_or_email)
-        except Exception as e:
-            print('Error in extra user debug:', e)
-        if not serializer.is_valid():
-            print('--- Login serializer errors ---')
-            print(serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        # If valid, return tokens as normal
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        return super().post(request, *args, **kwargs)
 
 
 # =========================
